@@ -5,17 +5,28 @@ const port = Number.parseInt(process.env.PORT ?? "3000", 10);
 const hostname = "0.0.0.0";
 const app = next({ dev: false, hostname, port });
 const handle = app.getRequestHandler();
+const healthPaths = new Set(["/", "/health", "/kaithhealth", "/kaithhealth/"]);
 
 await app.prepare();
 
-createServer((req, res) => {
-  if (req.url === "/kaithhealth") {
+const server = createServer((req, res) => {
+  const url = req.url ?? "/";
+  const path = url.split("?")[0];
+
+  console.log(`${req.method ?? "GET"} ${url}`);
+
+  if (healthPaths.has(path) && req.headers["user-agent"]?.includes("Leapcell")) {
     res.writeHead(200, { "content-type": "application/json" });
     res.end('{"status":"ok"}');
     return;
   }
 
   handle(req, res);
-}).listen(port, hostname, () => {
+});
+
+server.keepAliveTimeout = 65_000;
+server.headersTimeout = 66_000;
+
+server.listen({ host: hostname, port }, () => {
   console.log(`Server ready on http://${hostname}:${port}`);
 });
