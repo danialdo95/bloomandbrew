@@ -1,0 +1,81 @@
+import type { RedditPost } from "@/types/reddit";
+
+export const fallbackPosts: RedditPost[] = [
+  {
+    id: "fallback-latte-01",
+    title: "Soft tulip latte art for a quiet morning cafe menu",
+    author: "latte_story",
+    subreddit: "LatteArt",
+    score: 1840,
+    comments: 86,
+    url: "https://www.reddit.com/r/LatteArt/",
+    permalink: "https://www.reddit.com/r/LatteArt/",
+    imageUrl:
+      "https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=900&q=80",
+    createdAt: "2026-05-08T10:15:00.000Z",
+  },
+  {
+    id: "fallback-flower-01",
+    title: "Spring bouquet palette with ranunculus, tulips, and sweet pea",
+    author: "petal_notes",
+    subreddit: "flowers",
+    score: 1324,
+    comments: 54,
+    url: "https://www.reddit.com/r/flowers/",
+    permalink: "https://www.reddit.com/r/flowers/",
+    imageUrl:
+      "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=900&q=80",
+    createdAt: "2026-05-07T15:20:00.000Z",
+  },
+  {
+    id: "fallback-cafe-01",
+    title: "Minimalist cafe corner with warm lighting and ceramic cups",
+    author: "slowbar_daily",
+    subreddit: "Cafe",
+    score: 957,
+    comments: 41,
+    url: "https://www.reddit.com/r/Cafe/",
+    permalink: "https://www.reddit.com/r/Cafe/",
+    imageUrl:
+      "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=80",
+    createdAt: "2026-05-07T09:45:00.000Z",
+  },
+  {
+    id: "fallback-coffee-01",
+    title: "What makes a balanced pour-over taste floral instead of sour?",
+    author: "bloom_brewer",
+    subreddit: "Coffee",
+    score: 721,
+    comments: 118,
+    url: "https://www.reddit.com/r/Coffee/",
+    permalink: "https://www.reddit.com/r/Coffee/",
+    imageUrl: null,
+    createdAt: "2026-05-06T12:00:00.000Z",
+  },
+  {
+    id: "fallback-plants-01",
+    title: "Houseplants that make a cafe table feel alive without crowding it",
+    author: "green_corner",
+    subreddit: "houseplants",
+    score: 1108,
+    comments: 63,
+    url: "https://www.reddit.com/r/houseplants/",
+    permalink: "https://www.reddit.com/r/houseplants/",
+    imageUrl:
+      "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=900&q=80",
+    createdAt: "2026-05-05T17:35:00.000Z",
+  },
+  {
+    id: "fallback-florist-01",
+    title: "Florist workflow: preparing cafe table arrangements for weekends",
+    author: "stem_station",
+    subreddit: "florists",
+    score: 642,
+    comments: 37,
+    url: "https://www.reddit.com/r/florists/",
+    permalink: "https://www.reddit.com/r/florists/",
+    imageUrl:
+      "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=900&q=80",
+    createdAt: "2026-05-04T08:25:00.000Z",
+  },
+];

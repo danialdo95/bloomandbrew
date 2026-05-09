@@ -1,101 +1,155 @@
-import Image from "next/image";
+import { GalleryGrid } from "@/components/GalleryGrid";
+import { PollCard } from "@/components/PollCard";
+import { PostCard } from "@/components/PostCard";
+import { StatCard } from "@/components/StatCard";
+import { TrendTags } from "@/components/TrendTags";
+import { getRedditFeed } from "@/lib/reddit";
+import { getTrendingKeywords } from "@/lib/trends";
 
-export default function Home() {
+export default async function Home() {
+  const feed = await getRedditFeed();
+  const posts = feed.posts;
+  const trends = getTrendingKeywords(posts, 8);
+  const totalScore = posts.reduce((sum, post) => sum + post.score, 0);
+  const totalComments = posts.reduce((sum, post) => sum + post.comments, 0);
+  const heroPost = posts.find((post) => post.imageUrl);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-mono">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <main>
+      <section className="border-b border-[#eadfd4] bg-[#fff8f2]">
+        <div className="mx-auto grid max-w-7xl gap-10 px-5 py-12 lg:grid-cols-[0.95fr_1.05fr] lg:py-16">
+          <div className="flex flex-col justify-center">
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-[#c45572]">
+              Curated from cafe and floral communities
+            </p>
+            <h1 className="mt-5 max-w-3xl text-5xl font-black leading-[1.02] text-[#211f1d] md:text-7xl">
+              Fresh blooms, warm brews, social buzz.
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-[#6f6259]">
+              Bloom & Brew Social gathers cafe, coffee, flower, florist, and
+              plant discussions into one visual dashboard for discovery,
+              analysis, and lightweight community engagement.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <a
+                href="/discover"
+                className="rounded-full bg-[#211f1d] px-6 py-3 text-sm font-black text-white transition hover:bg-[#c45572]"
+              >
+                Shop the feed
+              </a>
+              <a
+                href="/trends"
+                className="rounded-full border border-[#211f1d] bg-white px-6 py-3 text-sm font-black text-[#211f1d] transition hover:bg-[#fff176]"
+              >
+                View trends
+              </a>
+            </div>
+          </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://leapcell.io/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/globe.svg"
-              alt="Globe icon"
-              width={20}
-              height={20}
-            />
-            Deploy on Leapcell
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
+          <div className="grid gap-4 md:grid-cols-[1fr_0.8fr]">
+            <div className="overflow-hidden rounded-[6px] border border-[#eadfd4] bg-white shadow-[0_16px_44px_rgba(64,45,35,0.12)]">
+              {heroPost?.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={heroPost.imageUrl}
+                  alt=""
+                  className="h-[430px] w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-[430px] items-center justify-center bg-[#f7c6cf] px-8 text-center text-3xl font-black text-[#211f1d]">
+                  Bloom & Brew Social
+                </div>
+              )}
+              <div className="p-5">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#c45572]">
+                  Featured inspiration
+                </p>
+                <h2 className="mt-2 text-xl font-black text-[#211f1d]">
+                  {heroPost?.title ?? "Cafe culture meets floral inspiration"}
+                </h2>
+              </div>
+            </div>
+
+            <div className="grid gap-4">
+              <StatCard
+                label="Posts tracked"
+                value={posts.length.toString()}
+                detail={`${feed.source === "reddit" ? "Live" : "Fallback"} feed across six communities`}
+              />
+              <StatCard
+                label="Upvotes"
+                value={totalScore.toLocaleString()}
+                detail="Combined social signal from the current feed"
+              />
+              <StatCard
+                label="Comments"
+                value={totalComments.toLocaleString()}
+                detail="Conversation volume across cafe and florist topics"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 py-12">
+        <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#c45572]">
+              Most popular
+            </p>
+            <h2 className="mt-2 text-3xl font-black text-[#211f1d]">
+              Bestselling community posts
+            </h2>
+          </div>
+          <a href="/discover" className="text-sm font-black text-[#c45572]">
+            See more posts
           </a>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+
+        <div className="grid gap-5 md:grid-cols-3">
+          {posts.slice(0, 3).map((post) => (
+            <PostCard key={post.id} post={post} compact />
+          ))}
+        </div>
+      </section>
+
+      <section className="border-y border-[#eadfd4] bg-white">
+        <div className="mx-auto max-w-7xl px-5 py-12">
+          <div className="mb-6">
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#c45572]">
+              Now in season
+            </p>
+            <h2 className="mt-2 text-3xl font-black text-[#211f1d]">
+              Visual ideas from latte art, flowers, and cafe spaces
+            </h2>
+          </div>
+          <GalleryGrid posts={posts} />
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 py-12">
+        <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#c45572]">
+              Trending searches
+            </p>
+            <h2 className="mt-2 text-3xl font-black text-[#211f1d]">
+              Keywords shaping the current conversation
+            </h2>
+          </div>
+          <TrendTags trends={trends} />
+        </div>
+      </section>
+
+      <section className="border-t border-[#eadfd4] bg-[#fff8f2]">
+        <div className="mx-auto max-w-7xl px-5 py-12">
+          <PollCard
+            id="homepage-atmosphere"
+            question="Which atmosphere fits Bloom & Brew best?"
+            options={["Botanical cafe", "Minimalist espresso bar", "Flower market corner"]}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://docs.leapcell.io/examples/nodejs/nextjs/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Leapcell guide
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        </div>
+      </section>
+    </main>
   );
 }

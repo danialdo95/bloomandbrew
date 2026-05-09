@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { Navbar } from "@/components/Navbar";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Bloom and Brew",
-  description: "A Next.js app ready to deploy on Leapcell.",
+  title: "Bloom & Brew Social",
+  description:
+    "A Reddit-powered cafe and florist community platform for social media ecosystem analysis.",
 };
 
 export default function RootLayout({
@@ -13,7 +15,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <Navbar />
+        {children}
+      </body>
     </html>
   );
 }
