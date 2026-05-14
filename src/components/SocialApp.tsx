@@ -146,37 +146,11 @@ function getTimeLabel(date: string) {
 }
 
 export function SocialApp({ redditPosts, source }: SocialAppProps) {
-  const [users, setUsers] = useState<DemoUser[]>(() => {
-    if (typeof window === "undefined") {
-      return [];
-    }
-
-    const storedUsers = window.localStorage.getItem("bloom-brew-users");
-    return storedUsers ? (JSON.parse(storedUsers) as DemoUser[]) : [];
-  });
-  const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    return window.localStorage.getItem("bloom-brew-current-user");
-  });
-  const [profile, setProfile] = useState<SocialProfile>(() => {
-    if (typeof window === "undefined") {
-      return defaultProfile;
-    }
-
-    const storedProfile = window.localStorage.getItem("bloom-brew-profile");
-    return storedProfile ? (JSON.parse(storedProfile) as SocialProfile) : defaultProfile;
-  });
-  const [posts, setPosts] = useState<SocialPost[]>(() => {
-    if (typeof window === "undefined") {
-      return seedSocialPosts(redditPosts);
-    }
-
-    const storedPosts = window.localStorage.getItem("bloom-brew-social-posts");
-    return storedPosts ? (JSON.parse(storedPosts) as SocialPost[]) : seedSocialPosts(redditPosts);
-  });
+  const [storageReady, setStorageReady] = useState(false);
+  const [users, setUsers] = useState<DemoUser[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<SocialProfile>(defaultProfile);
+  const [posts, setPosts] = useState<SocialPost[]>(() => seedSocialPosts(redditPosts));
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [filter, setFilter] = useState("Natural");
@@ -215,25 +189,68 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   const isAuthenticated = Boolean(currentUser);
 
   useEffect(() => {
-    window.localStorage.setItem("bloom-brew-users", JSON.stringify(users));
-  }, [users]);
+    window.setTimeout(() => {
+      const storedUsers = window.localStorage.getItem("bloom-brew-users");
+      const storedUserId = window.localStorage.getItem("bloom-brew-current-user");
+      const storedProfile = window.localStorage.getItem("bloom-brew-profile");
+      const storedPosts = window.localStorage.getItem("bloom-brew-social-posts");
+
+      if (storedUsers) {
+        setUsers(JSON.parse(storedUsers) as DemoUser[]);
+      }
+
+      if (storedUserId) {
+        setCurrentUserId(storedUserId);
+      }
+
+      if (storedProfile) {
+        setProfile(JSON.parse(storedProfile) as SocialProfile);
+      }
+
+      if (storedPosts) {
+        setPosts(JSON.parse(storedPosts) as SocialPost[]);
+      }
+
+      setStorageReady(true);
+    }, 0);
+  }, []);
 
   useEffect(() => {
+    if (!storageReady) {
+      return;
+    }
+
+    window.localStorage.setItem("bloom-brew-users", JSON.stringify(users));
+  }, [storageReady, users]);
+
+  useEffect(() => {
+    if (!storageReady) {
+      return;
+    }
+
     if (currentUserId) {
       window.localStorage.setItem("bloom-brew-current-user", currentUserId);
       return;
     }
 
     window.localStorage.removeItem("bloom-brew-current-user");
-  }, [currentUserId]);
+  }, [currentUserId, storageReady]);
 
   useEffect(() => {
+    if (!storageReady) {
+      return;
+    }
+
     window.localStorage.setItem("bloom-brew-profile", JSON.stringify(profile));
-  }, [profile]);
+  }, [profile, storageReady]);
 
   useEffect(() => {
+    if (!storageReady) {
+      return;
+    }
+
     window.localStorage.setItem("bloom-brew-social-posts", JSON.stringify(posts));
-  }, [posts]);
+  }, [posts, storageReady]);
 
   const trends = useMemo(() => {
     return getTrendingKeywords(
