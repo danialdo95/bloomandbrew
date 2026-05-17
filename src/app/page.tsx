@@ -9,6 +9,7 @@ export default async function Home() {
   <>
     <SocialApp redditPosts={feed.posts} source={feed.source} />
     <YouTubeSuggestion />
+    <YouTubeSuggestion />
   </>
 );
 }
