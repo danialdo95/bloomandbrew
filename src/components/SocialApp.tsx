@@ -75,6 +75,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const currentUser = users.find((user) => user.id === currentUserId) ?? null;
   const isAuthenticated = Boolean(currentUser);
@@ -84,7 +85,6 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       const storedUsers = window.localStorage.getItem("bloom-brew-users");
       const storedUserId = window.localStorage.getItem("bloom-brew-current-user");
       const storedProfile = window.localStorage.getItem("bloom-brew-profile");
-      const storedPosts = window.localStorage.getItem("bloom-brew-social-posts");
 
       if (storedUsers) {
         setUsers(JSON.parse(storedUsers) as DemoUser[]);
@@ -98,12 +98,44 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         setProfile(JSON.parse(storedProfile) as SocialProfile);
       }
 
-      if (storedPosts) {
-        setPosts(JSON.parse(storedPosts) as SocialPost[]);
-      }
-
       setStorageReady(true);
     }, 0);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadDatabasePosts() {
+      try {
+        const response = await fetch("/api/posts");
+
+        if (!response.ok) {
+          throw new Error(`Post fetch failed with status ${response.status}`);
+        }
+
+        const data = (await response.json()) as { posts: SocialPost[] };
+
+        if (!active) {
+          return;
+        }
+
+        setPosts((current) => {
+          const existingIds = new Set(data.posts.map((post) => post.id));
+          return [
+            ...data.posts,
+            ...current.filter((post) => !existingIds.has(post.id)),
+          ];
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    loadDatabasePosts();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -130,12 +162,6 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       window.localStorage.setItem("bloom-brew-profile", JSON.stringify(profile));
     }
   }, [profile, storageReady]);
-
-  useEffect(() => {
-    if (storageReady) {
-      window.localStorage.setItem("bloom-brew-social-posts", JSON.stringify(posts));
-    }
-  }, [posts, storageReady]);
 
   const trends = useMemo(() => {
     return getTrendingKeywords(
@@ -272,7 +298,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     );
   }
 
-  function publishPost() {
+  async function publishPost() {
     if (!requireAuth("share posts")) {
       return;
     }
@@ -281,29 +307,44 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       return;
     }
 
-    const nextPost: SocialPost = {
-      id: crypto.randomUUID(),
-      author: profile.name,
-      username: profile.username,
-      avatar: profile.avatar,
-      community: "Bloom & Brew",
-      content: content.trim() || "Shared a new Bloom & Brew moment.",
-      imageUrl: imageUrl.trim() || null,
-      filter,
-      location,
-      createdAt: new Date().toISOString(),
-      likes: 0,
-      shares: 0,
-      comments: [],
-      liked: false,
-      bookmarked: false,
-    };
+    setIsPublishing(true);
 
-    setPosts((current) => [nextPost, ...current]);
-    setContent("");
-    setImageUrl("");
-    setFilter("Natural");
-    addNotification("Your post was shared to the Bloom & Brew feed.");
+    try {
+      const response = await fetch("/api/posts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content,
+          imageUrl,
+          filter,
+          location,
+          profile,
+        }),
+      });
+
+      const data = (await response.json()) as { post?: SocialPost; error?: string };
+
+      if (!response.ok || !data.post) {
+        throw new Error(data.error ?? "Post could not be shared.");
+      }
+
+      setPosts((current) => [
+        data.post as SocialPost,
+        ...current.filter((post) => post.id !== data.post?.id),
+      ]);
+      setContent("");
+      setImageUrl("");
+      setFilter("Natural");
+      addNotification("Your post was shared to the Bloom & Brew feed.");
+    } catch (error) {
+      addNotification(
+        error instanceof Error ? error.message : "Post could not be shared.",
+      );
+    } finally {
+      setIsPublishing(false);
+    }
   }
 
   function toggleLike(postId: string) {
@@ -505,7 +546,10 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
             onLocationChange={setLocation}
             onUseCurrentLocation={useCurrentLocation}
             onRequestNotification={requestBrowserNotification}
-            onPublish={publishPost}
+            onPublish={() => {
+              void publishPost();
+            }}
+            isPublishing={isPublishing}
           />
 
           {posts.map((post) => (

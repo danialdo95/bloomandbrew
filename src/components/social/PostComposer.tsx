@@ -14,6 +14,7 @@ type PostComposerProps = {
   onUseCurrentLocation: () => void;
   onRequestNotification: () => void;
   onPublish: () => void;
+  isPublishing?: boolean;
 };
 
 export function PostComposer({
@@ -29,6 +30,7 @@ export function PostComposer({
   onUseCurrentLocation,
   onRequestNotification,
   onPublish,
+  isPublishing = false,
 }: PostComposerProps) {
   return (
     <div className="rounded-[6px] border border-[#eadfd4] bg-white p-5 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
@@ -98,9 +100,10 @@ export function PostComposer({
             <button
               type="button"
               onClick={onPublish}
+              disabled={isPublishing}
               className="rounded-full bg-[#211f1d] px-6 py-3 text-sm font-black text-white transition hover:bg-[#c45572]"
             >
-              Share post
+              {isPublishing ? "Sharing..." : "Share post"}
             </button>
           </div>
         </div>

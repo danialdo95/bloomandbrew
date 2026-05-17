@@ -12,7 +12,9 @@
 ## Project Description
 Bloom & Brew Social is a web-based social media prototype focused on cafe culture, coffee communities, floral inspiration, and florist aesthetics. The application integrates Reddit community data into a custom social feed and layers core social media interactions on top of that feed.
 
-The latest implementation is no longer only a dashboard. It now behaves like a frontend social media application where users can create a demo account, personalize a profile, publish posts, interact with posts, follow suggested creators, receive in-app notifications, chat, start a live-room demo, add image filters, and tag locations.
+The latest implementation is no longer only a dashboard. It now behaves like a social media application where users can create a demo account, personalize a profile, publish posts, interact with posts, follow suggested creators, receive in-app notifications, chat, start a live-room demo, add image filters, and tag locations.
+
+The first database migration step has also been completed. User-created posts are now stored in PostgreSQL through Prisma ORM, while demo authentication and secondary interactions such as likes, comments, saves, follows, chat, and notifications remain browser-local.
 
 The application demonstrates:
 - Managed communities
@@ -21,6 +23,7 @@ The application demonstrates:
 - News feed interaction loop
 - User identity and profile personalization
 - Core social media platform fundamentals
+- PostgreSQL-backed post persistence
 
 ---
 
@@ -55,28 +58,33 @@ Browser UI (Next.js App Router)
         |-- SocialApp client component
         |      |-- demo auth state
         |      |-- profile state
-        |      |-- posts/interactions
-        |      |-- localStorage persistence
+        |      |-- Reddit + database post feed
+        |      |-- local-only interactions
+        |      |-- localStorage persistence for demo auth/profile/interactions
         |
         |-- Next.js API Route: /api/reddit
-               |
-               |-- Reddit fetch layer: src/lib/reddit.ts
-               |-- Fallback post layer: src/lib/fallback-posts.ts
-               |-- Trend analysis: src/lib/trends.ts
+        |      |-- Reddit fetch layer: src/lib/reddit.ts
+        |      |-- Fallback post layer: src/lib/fallback-posts.ts
+        |
+        |-- Next.js API Route: /api/posts
+        |      |-- Prisma client: src/lib/prisma.ts
+        |      |-- PostgreSQL database
+        |
+        |-- Trend analysis: src/lib/trends.ts
 ```
 
 ## Data Flow
 
 ```text
-Reddit API
-   ↓
-src/lib/reddit.ts
-   ↓
-/api/reddit and server-rendered homepage
-   ↓
-SocialApp feed
-   ↓
-User interactions stored in localStorage
+Reddit API ──→ src/lib/reddit.ts ──→ server-rendered homepage ──┐
+                                                                ├─→ SocialApp feed
+PostgreSQL ─→ Prisma ─→ /api/posts ─────────────────────────────┘
+
+User-created posts:
+SocialApp composer ─→ POST /api/posts ─→ Prisma ─→ PostgreSQL
+
+Remaining demo-only state:
+auth/profile/interactions/chat/live/polls ─→ localStorage or React state
 ```
 
 ---
@@ -92,9 +100,10 @@ User interactions stored in localStorage
 | Social Media API | Reddit public JSON API |
 | Hosting | Leapcell |
 | Authentication | Demo localStorage authentication |
-| Database | Not currently used |
+| Database | Prisma Postgres / PostgreSQL |
+| ORM | Prisma ORM |
 | State Management | React Hooks |
-| Persistence | Browser localStorage |
+| Persistence | PostgreSQL for user-created posts; localStorage for demo auth/profile/interactions |
 | Charts/Analytics | Custom keyword and subreddit analysis |
 
 ---
@@ -136,11 +145,11 @@ If Reddit requests fail or return no usable posts, the app uses curated fallback
 # 6.2 Social Feed
 
 ## Description
-The homepage is a social feed powered by Reddit posts and user-created local posts.
+The homepage is a social feed powered by Reddit posts and PostgreSQL-backed user-created posts.
 
 ## Features
 - Reddit-seeded posts
-- User-created posts
+- Database-backed user-created posts
 - Text post composer
 - Image URL attachment
 - Media filter selection
@@ -149,6 +158,11 @@ The homepage is a social feed powered by Reddit posts and user-created local pos
 - Comment system
 - Share counter
 - Save/bookmark state
+
+## Current Persistence Split
+- User-created post records are saved to PostgreSQL.
+- Reddit posts remain external feed content.
+- Likes, comments, saves, and shares remain local UI state and are not yet stored in PostgreSQL.
 
 ---
 
@@ -183,7 +197,7 @@ Users can personalize their visible profile.
 - Avatar initials
 - Location
 
-When signed in, profile changes are saved to the demo user account in localStorage.
+When signed in, profile changes are saved to the demo user account in localStorage. When a user publishes a post, the visible author information for that post is also written to PostgreSQL through the `/api/posts` route.
 
 ---
 
@@ -201,7 +215,7 @@ Users can interact with posts and creators.
 - Send demo chat messages
 - Start/end a live-room demo
 
-These interactions are persisted locally in the browser.
+These interactions are currently persisted locally in the browser. Database persistence has only been implemented for post creation so far.
 
 ---
 
@@ -330,9 +344,9 @@ The Community page demonstrates polls and community participation.
 |---|---|---|
 | 1 | User Sign Up | Sign up popup modal with localStorage demo account |
 | 2 | Profile Personalization | Editable profile card with name, username, bio, avatar initials, location |
-| 3 | News Feed | Reddit-seeded and user-created homepage feed |
+| 3 | News Feed | Reddit-seeded feed plus PostgreSQL-backed user-created posts |
 | 4 | Push Notifications | Browser notification permission request and in-app notification panel |
-| 5 | Content Sharing | Composer, post publishing, share counter, image URL support |
+| 5 | Content Sharing | Composer, PostgreSQL-backed post publishing, share counter, image URL support |
 | 6 | In-App Chat / Calling | In-app chat demo; calling not implemented |
 | 7 | Follow / Friend Requests | Suggested creators with follow/unfollow |
 | 8 | Media Editing | CSS-based image filters in composer |
@@ -349,7 +363,7 @@ The Community page demonstrates polls and community participation.
 | FR-02 | System shall display images and rich content | Implemented |
 | FR-03 | Users shall sign up and sign in | Implemented as demo localStorage auth |
 | FR-04 | Users shall personalize profiles | Implemented |
-| FR-05 | Users shall publish posts | Implemented locally |
+| FR-05 | Users shall publish posts | Implemented with PostgreSQL persistence |
 | FR-06 | Users shall like, comment, save, and share posts | Implemented locally |
 | FR-07 | Users shall follow creators | Implemented locally |
 | FR-08 | Users shall view trending topics | Implemented |
@@ -368,10 +382,10 @@ The Community page demonstrates polls and community participation.
 |---|---|---|
 | Performance | Page load should remain fast | Reddit fetch is cached/revalidated; fallback data is available |
 | Responsiveness | Mobile-friendly UI | Tailwind responsive grid layouts |
-| Reliability | Stable API behavior | Fallback posts if Reddit fails |
+| Reliability | Stable API behavior | Fallback posts if Reddit fails; Prisma verification script exists |
 | Usability | Easy-to-use interface | Modal auth, social feed, cards, clear actions |
 | Deployability | Online hosting | Leapcell service with `npm start` and port `3000` |
-| Maintainability | Clear file separation | Components, lib utilities, types, and app routes are separated |
+| Maintainability | Clear file separation | Social components, lib utilities, Prisma config, types, and app routes are separated |
 
 ---
 
@@ -407,7 +421,7 @@ GET
 }
 ```
 
-## 10.2 Internal API Route
+## 10.2 Internal Reddit API Route
 
 ### Endpoint
 
@@ -426,6 +440,66 @@ GET /api/reddit
 ```
 
 The `source` field can be either `reddit` or `fallback`.
+
+## 10.3 Internal Posts API Route
+
+### Endpoint
+
+```http
+GET /api/posts
+```
+
+### Description
+Returns PostgreSQL-backed user-created posts in the social feed format.
+
+### Response Shape
+
+```json
+{
+  "posts": []
+}
+```
+
+### Endpoint
+
+```http
+POST /api/posts
+```
+
+### Description
+Creates a new Bloom & Brew post in PostgreSQL. Until real authentication is implemented, the route receives the current demo profile from the client and upserts a matching author record.
+
+### Request Shape
+
+```json
+{
+  "content": "New cafe and bouquet idea",
+  "imageUrl": "https://example.com/image.jpg",
+  "filter": "Blush",
+  "location": "Kuala Lumpur",
+  "profile": {
+    "name": "Bloom Barista",
+    "username": "bloombarista",
+    "avatar": "BB",
+    "bio": "Cafe and floral moments",
+    "location": "Kuala Lumpur"
+  }
+}
+```
+
+### Response Shape
+
+```json
+{
+  "post": {
+    "id": "post_id",
+    "author": "Bloom Barista",
+    "username": "bloombarista",
+    "community": "Bloom & Brew",
+    "content": "New cafe and bouquet idea"
+  }
+}
+```
 
 ---
 
@@ -482,7 +556,11 @@ The `source` field can be either `reddit` or `fallback`.
 src/
   app/
     api/
+      posts/
+        route.ts
       reddit/
+        route.ts
+      youtube/
         route.ts
     community/
       page.tsx
@@ -504,12 +582,31 @@ src/
     SocialApp.tsx
     StatCard.tsx
     TrendTags.tsx
+    YouTubeSuggestion.tsx
+    social/
+      AuthModal.tsx
+      FeedPost.tsx
+      PostComposer.tsx
+      ProfilePanel.tsx
+      SocialHero.tsx
+      SocialSidebar.tsx
+      SuggestedFollows.tsx
   lib/
     fallback-posts.ts
+    prisma.ts
     reddit.ts
+    social.ts
     trends.ts
   types/
     reddit.ts
+    social.ts
+prisma/
+  migrations/
+  schema.prisma
+  seed.ts
+scripts/
+  verify-prisma.ts
+prisma.config.ts
 ```
 
 ---
@@ -524,11 +621,14 @@ src/
 | Start Command | `npm start` |
 | Serving Port | `3000` |
 | Domain | Leapcell generated domain |
+| Database | Prisma Postgres / PostgreSQL |
+| Required Environment Variable | `DATABASE_URL` |
 
 ## Current Production Start Script
 
 ```json
 {
+  "build": "prisma generate && next build",
   "start": "next start"
 }
 ```
@@ -541,10 +641,11 @@ src/
 |---|---|
 | Reddit API failure | Fallback dataset |
 | API abuse | Reddit fetch cache/revalidation |
-| Sensitive keys | No API keys currently required |
+| Sensitive keys | `DATABASE_URL` is stored in `.env` locally and must be configured as a deployment environment variable |
 | XSS | React escapes rendered text; user content is rendered as text |
 | Demo authentication | localStorage only; not production-secure |
 | Password storage | Plain localStorage demo only; must be replaced for production |
+| Database access | Prisma Client is used only from server-side code/API routes |
 
 ## Production Security Recommendation
 For a real deployed social network, replace localStorage demo authentication with:
@@ -555,22 +656,67 @@ For a real deployed social network, replace localStorage demo authentication wit
 
 ---
 
-# 15. Limitations
+# 15. Current Implementation Status
+
+## Completed
+- Leapcell deployment with `npm start`
+- Reddit feed integration with fallback data
+- Social feed UI
+- Demo sign in/sign up modal
+- Profile personalization UI
+- PostgreSQL-backed post creation
+- `GET /api/posts` and `POST /api/posts`
+- Prisma schema, migrations, generated client, seed script, and verification script
+- Image URL posting and CSS filter selection
+- Location tagging in the composer
+- Local likes, comments, shares, and saves
+- Local suggested follows
+- In-app notifications and browser notification permission request
+- Local chat demo
+- Live-room state demo
+- Trends, Discover, and Community pages
+
+## Partially Implemented
+- User identity: demo accounts exist, but real authentication does not
+- Profile data: editable locally and copied into DB post author records, but not fully account-backed
+- Feed persistence: user-created posts persist in PostgreSQL, but Reddit posts remain external and interactions remain local
+- Notifications: in-app only, with browser permission request but no push service worker
+- Media editing: CSS filters only
+- Geolocation: coordinate tagging only, no map/location search
+
+## Not Yet Implemented
+- Real server-side authentication
+- Password hashing or OAuth
+- Database-backed sessions
+- Database-backed comments
+- Database-backed likes
+- Database-backed saves/bookmarks
+- Database-backed follows/friend requests
+- Database-backed notifications
+- Database-backed chat messages
+- Real-time chat/calling
+- Real push notifications
+- File upload/object storage
+- Real video/audio streaming
+- Server-side authorization rules
+
+---
+
+# 16. Limitations
 
 - Authentication is demo-only and browser-local
-- Posts are not shared across different users/devices
-- Comments, likes, bookmarks, follows, and chat are local-only
+- User-created posts are stored in PostgreSQL, but post ownership is still based on demo profile data until real auth is added
+- Comments, likes, bookmarks, follows, polls, notifications, and chat are local-only
 - Chat is not real-time between users
 - Live room is a state demo, not video/audio streaming
-- No production database is currently connected
 - No server-side user authorization is implemented
 
 ---
 
-# 16. Future Improvements
+# 17. Future Improvements
 
 - Real authentication with NextAuth, Supabase Auth, or custom auth
-- PostgreSQL/Supabase database for users, posts, comments, follows, and notifications
+- Extend PostgreSQL persistence to comments, likes, saves, follows, notifications, and messages
 - Real-time chat with WebSockets or Supabase Realtime
 - File upload for media instead of image URLs
 - Push notifications through service workers
@@ -583,7 +729,7 @@ For a real deployed social network, replace localStorage demo authentication wit
 
 ---
 
-# 17. Conclusion
+# 18. Conclusion
 
 Bloom & Brew Social is now a deployable social media prototype that combines Reddit-powered community content with core social media interactions. The application demonstrates the required social media platform fundamentals through a frontend demo experience: account creation, profile personalization, feed interactions, content sharing, notifications, chat, following, media editing, streaming concepts, and geolocation.
 
