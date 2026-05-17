@@ -2,41 +2,55 @@
 
 import { useEffect, useState } from "react";
 
+type Video = {
+  id: {
+    videoId: string;
+  };
+  snippet: {
+    title: string;
+  };
+};
+
 export function YouTubeSuggestion() {
-  const [videoId, setVideoId] = useState("");
+  const [videos, setVideos] = useState<Video[]>([]);
 
   useEffect(() => {
-    async function loadVideo() {
+    async function loadVideos() {
       const res = await fetch("/api/youtube");
       const data = await res.json();
 
-      const id = data.items?.[0]?.id?.videoId;
-      setVideoId(id);
+      setVideos(data.items || []);
     }
 
-    loadVideo();
+    loadVideos();
   }, []);
 
-  if (!videoId) return <p>Loading YouTube suggestion...</p>;
+  if (videos.length === 0) {
+    return <p>Loading YouTube suggestions...</p>;
+  }
 
   return (
     <section className="mt-6 rounded-xl bg-white p-4 shadow">
-      <h2 className="text-xl font-bold mb-3">
-        🎥 Auto Suggested Café Video
-      </h2>
+      <h2 className="text-xl font-bold mb-3">🎥 Auto Suggested Café Videos</h2>
 
-      <iframe
-        className="w-full rounded-xl"
-        height="220"
-        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&rel=0`}
-        title="Auto Suggested Café Video"
-        allow="autoplay; encrypted-media; picture-in-picture"
-        allowFullScreen
-      />
+      <div className="space-y-4">
+        {videos.map((video) => (
+          <div key={video.id.videoId}>
+            <iframe
+              className="w-full rounded-xl"
+              height="220"
+              src={`https://www.youtube.com/embed/${video.id.videoId}?autoplay=0&mute=1&rel=0`}
+              title={video.snippet.title}
+              allow="autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+            />
 
-      <p className="mt-2 text-sm text-gray-500">
-        Suggested automatically from YouTube API based on café and latte content.
-      </p>
+            <p className="mt-2 text-sm font-semibold">
+              {video.snippet.title}
+            </p>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
