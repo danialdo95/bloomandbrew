@@ -58,7 +58,7 @@ export function SocialHero({
                   Join the social feed
                 </p>
                 <p className="mt-2 text-sm font-bold leading-6 text-[#6f6259]">
-                  Sign in or create a demo account to post, comment, follow,
+                  Sign in or create an account to post, comment, follow,
                   chat, save, and go live.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">

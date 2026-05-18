@@ -45,7 +45,6 @@ export type ChatMessage = {
 export type DemoUser = {
   id: string;
   email: string;
-  password: string;
   profile: SocialProfile;
 };
 

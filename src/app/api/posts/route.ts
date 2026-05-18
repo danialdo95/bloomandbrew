@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { SocialPost, SocialProfile } from "@/types/social";
+import type { SocialPost } from "@/types/social";
 
 function toSocialPost(post: {
   id: string;
@@ -53,13 +54,10 @@ function toSocialPost(post: {
   };
 }
 
-function normalizeUsername(value: string) {
-  return value.replace(/[^a-z0-9_]/gi, "").toLowerCase() || "bloombarista";
-}
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const viewer = searchParams.get("viewer") ?? undefined;
+  const user = await getCurrentUser();
+  const viewer = user?.id ?? searchParams.get("viewer") ?? undefined;
   const posts = await prisma.post.findMany({
     include: {
       author: true,
@@ -83,12 +81,17 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  }
+
   const body = (await request.json()) as {
     content?: unknown;
     imageUrl?: unknown;
     filter?: unknown;
     location?: unknown;
-    profile?: Partial<SocialProfile>;
   };
 
   const content = typeof body.content === "string" ? body.content.trim() : "";
@@ -99,8 +102,6 @@ export async function POST(request: Request) {
   const location = typeof body.location === "string" && body.location.trim()
     ? body.location.trim()
     : "Bloom & Brew Social";
-  const profile = body.profile ?? {};
-
   if (!content && !imageUrl) {
     return NextResponse.json(
       { error: "Post content or image URL is required." },
@@ -108,39 +109,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const username = normalizeUsername(
-    typeof profile.username === "string" ? profile.username : "bloombarista",
-  );
-  const name = typeof profile.name === "string" && profile.name.trim()
-    ? profile.name.trim()
-    : "Bloom Barista";
-  const avatar = typeof profile.avatar === "string" && profile.avatar.trim()
-    ? profile.avatar.trim().slice(0, 4)
-    : "BB";
-
-  const author = await prisma.user.upsert({
-    where: {
-      username,
-    },
-    update: {
-      name,
-      avatar,
-      bio: typeof profile.bio === "string" ? profile.bio : undefined,
-      location: typeof profile.location === "string" ? profile.location : undefined,
-    },
-    create: {
-      email: `${username}@bloomandbrew.local`,
-      username,
-      name,
-      avatar,
-      bio: typeof profile.bio === "string" ? profile.bio : "Bloom & Brew member.",
-      location: typeof profile.location === "string" ? profile.location : location,
-    },
-  });
-
   const post = await prisma.post.create({
     data: {
-      authorId: author.id,
+      authorId: user.id,
       community: "Bloom & Brew",
       content: content || "Shared a new Bloom & Brew moment.",
       imageUrl: imageUrl || null,
@@ -155,5 +126,5 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.json({ post: toSocialPost(post) }, { status: 201 });
+  return NextResponse.json({ post: toSocialPost(post, user.id) }, { status: 201 });
 }

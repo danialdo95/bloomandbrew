@@ -12,9 +12,9 @@
 ## Project Description
 Bloom & Brew Social is a web-based social media prototype focused on cafe culture, coffee communities, floral inspiration, and florist aesthetics. The application integrates Reddit community data into a custom social feed and layers core social media interactions on top of that feed.
 
-The latest implementation is no longer only a dashboard. It now behaves like a social media application where users can create a demo account, personalize a profile, publish posts, interact with posts, follow suggested creators, receive in-app notifications, chat, start a live-room demo, add image filters, and tag locations.
+The latest implementation is no longer only a dashboard. It now behaves like a social media application where users can create an account, personalize a profile, publish posts, interact with posts, follow suggested creators, receive in-app notifications, chat, start a live-room demo, add image filters, and tag locations.
 
-The first database migration steps have also been completed. User-created posts, comments, likes, and saves/bookmarks on database-backed posts are now stored in PostgreSQL through Prisma ORM, while demo authentication and secondary interactions such as follows, chat, and notifications remain browser-local.
+The first database migration steps have also been completed. User accounts, sessions, user-created posts, comments, likes, and saves/bookmarks on database-backed posts are now stored in PostgreSQL through Prisma ORM, while secondary interactions such as follows, chat, and notifications remain browser-local.
 
 The application demonstrates:
 - Managed communities
@@ -56,11 +56,16 @@ The application demonstrates:
 Browser UI (Next.js App Router)
         |
         |-- SocialApp client component
-        |      |-- demo auth state
+        |      |-- authenticated user state
         |      |-- profile state
         |      |-- Reddit + database post feed
         |      |-- local-only interactions
-        |      |-- localStorage persistence for demo auth/profile/interactions
+        |      |-- localStorage/React state for remaining demo-only interactions
+        |
+        |-- Next.js API Routes: /api/auth/*
+        |      |-- password hashing
+        |      |-- HTTP-only session cookie
+        |      |-- Session table
         |
         |-- Next.js API Route: /api/reddit
         |      |-- Reddit fetch layer: src/lib/reddit.ts
@@ -84,7 +89,7 @@ User-created posts:
 SocialApp composer ─→ POST /api/posts ─→ Prisma ─→ PostgreSQL
 
 Remaining demo-only state:
-auth/profile/interactions/chat/live/polls ─→ localStorage or React state
+follows/chat/live/polls/share counters ─→ localStorage or React state
 ```
 
 ---
@@ -99,11 +104,11 @@ auth/profile/interactions/chat/live/polls ─→ localStorage or React state
 | Backend/API | Next.js API Routes |
 | Social Media API | Reddit public JSON API |
 | Hosting | Leapcell |
-| Authentication | Demo localStorage authentication |
+| Authentication | Custom database-backed authentication |
 | Database | Prisma Postgres / PostgreSQL |
 | ORM | Prisma ORM |
 | State Management | React Hooks |
-| Persistence | PostgreSQL for user-created posts; localStorage for demo auth/profile/interactions |
+| Persistence | PostgreSQL for users, sessions, posts, comments, likes, and saves; localStorage/React state for remaining demo features |
 | Charts/Analytics | Custom keyword and subreddit analysis |
 
 ---
@@ -170,7 +175,7 @@ The homepage is a social feed powered by Reddit posts and PostgreSQL-backed user
 
 ---
 
-# 6.3 Demo Authentication
+# 6.3 Authentication
 
 ## Description
 The app includes a popup modal for sign in and sign up.
@@ -178,14 +183,15 @@ The app includes a popup modal for sign in and sign up.
 ## Features
 - Sign in modal
 - Sign up modal
-- Demo account creation
-- Current session stored in localStorage
+- Database-backed account creation
+- Password hashing
+- HTTP-only session cookie
 - Account status display
 - Sign out
 - Login required before key interactions
 
 ## Limitation
-This is not production authentication. It is designed for academic demonstration only. Demo users and passwords are stored in the browser through localStorage.
+This is a custom prototype authentication flow. It uses hashed passwords and database-backed sessions, but it does not yet include email verification, OAuth, password reset, rate limiting, or advanced account security controls.
 
 ---
 
@@ -201,7 +207,7 @@ Users can personalize their visible profile.
 - Avatar initials
 - Location
 
-When signed in, profile changes are saved to the demo user account in localStorage. When a user publishes a post, the visible author information for that post is also written to PostgreSQL through the `/api/posts` route.
+When signed in, profile changes are saved to the authenticated PostgreSQL user record. Posts, comments, likes, and saves use the authenticated user rather than trusting browser-only profile data.
 
 ---
 
@@ -338,7 +344,7 @@ The Community page demonstrates polls and community participation.
 - Poll cards
 - Local voting
 - Percentage display
-- localStorage persistence
+- PostgreSQL persistence for users, sessions, posts, comments, likes, and saves
 
 ---
 
@@ -346,8 +352,8 @@ The Community page demonstrates polls and community participation.
 
 | No. | Fundamental | Current Implementation |
 |---|---|---|
-| 1 | User Sign Up | Sign up popup modal with localStorage demo account |
-| 2 | Profile Personalization | Editable profile card with name, username, bio, avatar initials, location |
+| 1 | User Sign Up | Sign up popup modal with PostgreSQL user account and session cookie |
+| 2 | Profile Personalization | Editable profile card with database-backed name, username, bio, avatar initials, location |
 | 3 | News Feed | Reddit-seeded feed plus PostgreSQL-backed user-created posts |
 | 4 | Push Notifications | Browser notification permission request and in-app notification panel |
 | 5 | Content Sharing | Composer, PostgreSQL-backed post publishing, share counter, image URL support |
@@ -365,8 +371,8 @@ The Community page demonstrates polls and community participation.
 |---|---|---|
 | FR-01 | System shall fetch Reddit posts | Implemented |
 | FR-02 | System shall display images and rich content | Implemented |
-| FR-03 | Users shall sign up and sign in | Implemented as demo localStorage auth |
-| FR-04 | Users shall personalize profiles | Implemented |
+| FR-03 | Users shall sign up and sign in | Implemented with PostgreSQL users, hashed passwords, and session cookies |
+| FR-04 | Users shall personalize profiles | Implemented with PostgreSQL persistence |
 | FR-05 | Users shall publish posts | Implemented with PostgreSQL persistence |
 | FR-06 | Users shall like, comment, save, and share posts | Likes, comments, and saves are database-backed for DB posts; shares are local |
 | FR-07 | Users shall follow creators | Implemented locally |
@@ -471,7 +477,7 @@ POST /api/posts
 ```
 
 ### Description
-Creates a new Bloom & Brew post in PostgreSQL. Until real authentication is implemented, the route receives the current demo profile from the client and upserts a matching author record.
+Creates a new Bloom & Brew post in PostgreSQL for the authenticated user.
 
 ### Request Shape
 
@@ -481,13 +487,7 @@ Creates a new Bloom & Brew post in PostgreSQL. Until real authentication is impl
   "imageUrl": "https://example.com/image.jpg",
   "filter": "Blush",
   "location": "Kuala Lumpur",
-  "profile": {
-    "name": "Bloom Barista",
-    "username": "bloombarista",
-    "avatar": "BB",
-    "bio": "Cafe and floral moments",
-    "location": "Kuala Lumpur"
-  }
+  "location": "Kuala Lumpur"
 }
 ```
 
@@ -501,6 +501,60 @@ Creates a new Bloom & Brew post in PostgreSQL. Until real authentication is impl
     "username": "bloombarista",
     "community": "Bloom & Brew",
     "content": "New cafe and bouquet idea"
+  }
+}
+```
+
+---
+
+## 10.4 Internal Authentication API Routes
+
+### Endpoints
+
+```http
+POST /api/auth/signup
+POST /api/auth/login
+POST /api/auth/logout
+GET /api/auth/me
+PATCH /api/auth/me
+```
+
+### Description
+These routes manage Bloom & Brew user accounts and sessions. Passwords are hashed before storage, and authenticated sessions are stored in PostgreSQL with an HTTP-only cookie.
+
+### Signup Request Shape
+
+```json
+{
+  "name": "Bloom Barista",
+  "email": "user@example.com",
+  "password": "secure-password"
+}
+```
+
+### Login Request Shape
+
+```json
+{
+  "email": "user@example.com",
+  "password": "secure-password"
+}
+```
+
+### Auth User Response Shape
+
+```json
+{
+  "user": {
+    "id": "user_id",
+    "email": "user@example.com",
+    "profile": {
+      "name": "Bloom Barista",
+      "username": "bloombarista",
+      "bio": "New to Bloom & Brew Social.",
+      "location": "Kuala Lumpur",
+      "avatar": "BB"
+    }
   }
 }
 ```
@@ -560,6 +614,15 @@ Creates a new Bloom & Brew post in PostgreSQL. Until real authentication is impl
 src/
   app/
     api/
+      auth/
+        login/
+          route.ts
+        logout/
+          route.ts
+        me/
+          route.ts
+        signup/
+          route.ts
       posts/
         route.ts
       reddit/
@@ -596,6 +659,7 @@ src/
       SocialSidebar.tsx
       SuggestedFollows.tsx
   lib/
+    auth.ts
     fallback-posts.ts
     prisma.ts
     reddit.ts
@@ -647,16 +711,18 @@ prisma.config.ts
 | API abuse | Reddit fetch cache/revalidation |
 | Sensitive keys | `DATABASE_URL` is stored in `.env` locally and must be configured as a deployment environment variable |
 | XSS | React escapes rendered text; user content is rendered as text |
-| Demo authentication | localStorage only; not production-secure |
-| Password storage | Plain localStorage demo only; must be replaced for production |
+| Authentication | Database-backed custom auth with HTTP-only session cookie |
+| Password storage | Passwords are hashed before storage |
 | Database access | Prisma Client is used only from server-side code/API routes |
 
 ## Production Security Recommendation
-For a real deployed social network, replace localStorage demo authentication with:
-- secure server-side authentication
-- hashed passwords or OAuth
-- database-backed sessions
-- server-side authorization checks
+For a real deployed social network, strengthen the current custom auth with:
+- email verification
+- password reset
+- rate limiting
+- OAuth option
+- CSRF review for state-changing routes
+- stricter server-side authorization checks
 
 ---
 
@@ -666,8 +732,10 @@ For a real deployed social network, replace localStorage demo authentication wit
 - Leapcell deployment with `npm start`
 - Reddit feed integration with fallback data
 - Social feed UI
-- Demo sign in/sign up modal
-- Profile personalization UI
+- Database-backed sign in/sign up modal
+- Database-backed profile personalization
+- Hashed password storage
+- HTTP-only session cookies
 - PostgreSQL-backed post creation
 - PostgreSQL-backed comments for database posts
 - PostgreSQL-backed likes for database posts
@@ -690,20 +758,19 @@ For a real deployed social network, replace localStorage demo authentication wit
 - Trends, Discover, and Community pages
 
 ## Partially Implemented
-- User identity: demo accounts exist, but real authentication does not
-- Profile data: editable locally and copied into DB post author records, but not fully account-backed
 - Feed persistence: user-created posts persist in PostgreSQL, but Reddit posts remain external and interactions remain local
 - Comment persistence: database post comments persist in PostgreSQL, but Reddit post comments remain local
 - Like persistence: database post likes persist in PostgreSQL, but Reddit post likes remain local
 - Save persistence: database post bookmarks persist in PostgreSQL, but Reddit post saves remain local
+- User identity: real accounts exist, but there is no email verification, password reset, OAuth, or role-based authorization yet
 - Notifications: in-app only, with browser permission request but no push service worker
 - Media editing: CSS filters only
 - Geolocation: coordinate tagging only, no map/location search
 
 ## Not Yet Implemented
-- Real server-side authentication
-- Password hashing or OAuth
-- Database-backed sessions
+- OAuth login
+- Email verification
+- Password reset
 - Database-backed follows/friend requests
 - Database-backed notifications
 - Database-backed chat messages
@@ -717,8 +784,8 @@ For a real deployed social network, replace localStorage demo authentication wit
 
 # 16. Limitations
 
-- Authentication is demo-only and browser-local
-- User-created posts are stored in PostgreSQL, but post ownership is still based on demo profile data until real auth is added
+- Authentication is custom and intentionally simple for the prototype
+- User-created posts, comments, likes, and saves use authenticated user records
 - Comments, likes, and saves on Reddit posts, plus follows, polls, notifications, and chat are local-only
 - Chat is not real-time between users
 - Live room is a state demo, not video/audio streaming
@@ -728,7 +795,7 @@ For a real deployed social network, replace localStorage demo authentication wit
 
 # 17. Future Improvements
 
-- Real authentication with NextAuth, Supabase Auth, or custom auth
+- OAuth login with Auth.js, Supabase Auth, or another provider
 - Extend PostgreSQL persistence to follows, notifications, and messages
 - Real-time chat with WebSockets or Supabase Realtime
 - File upload for media instead of image URLs
@@ -746,4 +813,4 @@ For a real deployed social network, replace localStorage demo authentication wit
 
 Bloom & Brew Social is now a deployable social media prototype that combines Reddit-powered community content with core social media interactions. The application demonstrates the required social media platform fundamentals through a frontend demo experience: account creation, profile personalization, feed interactions, content sharing, notifications, chat, following, media editing, streaming concepts, and geolocation.
 
-The current version is suitable for academic demonstration and deployment. For production use, the localStorage-based demo features should be replaced with real authentication, persistent database storage, and real-time infrastructure.
+The current version is suitable for academic demonstration and deployment. For production use, the remaining local/demo features should be replaced with persistent database storage, stronger account security, and real-time infrastructure.

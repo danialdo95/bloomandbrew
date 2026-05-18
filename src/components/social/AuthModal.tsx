@@ -122,8 +122,8 @@ export function AuthModal({
           </button>
 
           <p className="text-center text-xs font-bold leading-5 text-[#8a7d73]">
-            Demo auth stores account data in this browser only. It is for
-            assignment functionality, not production security.
+            Accounts are stored in PostgreSQL with a secure session cookie for this
+            prototype.
           </p>
         </form>
       </div>

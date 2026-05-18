@@ -1,20 +1,21 @@
 import { NextResponse } from "next/server";
 
+import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { SocialProfile } from "@/types/social";
-
-function normalizeUsername(value: string) {
-  return value.replace(/[^a-z0-9_]/gi, "").toLowerCase() || "bloombarista";
-}
 
 export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  }
+
   const { id: postId } = await context.params;
   const body = (await request.json()) as {
     text?: unknown;
-    profile?: Partial<SocialProfile>;
   };
 
   const text = typeof body.text === "string" ? body.text.trim() : "";
@@ -39,23 +40,12 @@ export async function POST(
     return NextResponse.json({ error: "Post not found." }, { status: 404 });
   }
 
-  const profile = body.profile ?? {};
-  const authorName = typeof profile.name === "string" && profile.name.trim()
-    ? profile.name.trim()
-    : "Bloom Barista";
-  const authorUsername = normalizeUsername(
-    typeof profile.username === "string" ? profile.username : "bloombarista",
-  );
-  const authorAvatar = typeof profile.avatar === "string" && profile.avatar.trim()
-    ? profile.avatar.trim().slice(0, 4)
-    : "BB";
-
   const comment = await prisma.comment.create({
     data: {
       postId,
-      authorName,
-      authorUsername,
-      authorAvatar,
+      authorName: user.name,
+      authorUsername: user.username,
+      authorAvatar: user.avatar,
       text,
     },
   });

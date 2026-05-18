@@ -11,7 +11,6 @@ import { SocialSidebar } from "@/components/social/SocialSidebar";
 import { SuggestedFollows } from "@/components/social/SuggestedFollows";
 import {
   defaultProfile,
-  getInitials,
   seedSocialPosts,
   suggestedPeople,
 } from "@/lib/social";
@@ -53,8 +52,7 @@ const initialChatMessages: ChatMessage[] = [
 
 export function SocialApp({ redditPosts, source }: SocialAppProps) {
   const [storageReady, setStorageReady] = useState(false);
-  const [users, setUsers] = useState<DemoUser[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<DemoUser | null>(null);
   const [profile, setProfile] = useState<SocialProfile>(defaultProfile);
   const [posts, setPosts] = useState<SocialPost[]>(() => seedSocialPosts(redditPosts));
   const [content, setContent] = useState("");
@@ -77,29 +75,26 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   const [authError, setAuthError] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
 
-  const currentUser = users.find((user) => user.id === currentUserId) ?? null;
   const isAuthenticated = Boolean(currentUser);
 
   useEffect(() => {
-    window.setTimeout(() => {
-      const storedUsers = window.localStorage.getItem("bloom-brew-users");
-      const storedUserId = window.localStorage.getItem("bloom-brew-current-user");
-      const storedProfile = window.localStorage.getItem("bloom-brew-profile");
+    async function loadSession() {
+      try {
+        const response = await fetch("/api/auth/me");
+        const data = (await response.json()) as { user: DemoUser | null };
 
-      if (storedUsers) {
-        setUsers(JSON.parse(storedUsers) as DemoUser[]);
-      }
-
-      if (storedUserId) {
-        setCurrentUserId(storedUserId);
-      }
-
-      if (storedProfile) {
-        setProfile(JSON.parse(storedProfile) as SocialProfile);
+        if (data.user) {
+          setCurrentUser(data.user);
+          setProfile(data.user.profile);
+        }
+      } catch (error) {
+        console.error(error);
       }
 
       setStorageReady(true);
-    }, 0);
+    }
+
+    loadSession();
   }, []);
 
   useEffect(() => {
@@ -144,31 +139,6 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       active = false;
     };
   }, [profile.username, storageReady]);
-
-  useEffect(() => {
-    if (storageReady) {
-      window.localStorage.setItem("bloom-brew-users", JSON.stringify(users));
-    }
-  }, [storageReady, users]);
-
-  useEffect(() => {
-    if (!storageReady) {
-      return;
-    }
-
-    if (currentUserId) {
-      window.localStorage.setItem("bloom-brew-current-user", currentUserId);
-      return;
-    }
-
-    window.localStorage.removeItem("bloom-brew-current-user");
-  }, [currentUserId, storageReady]);
-
-  useEffect(() => {
-    if (storageReady) {
-      window.localStorage.setItem("bloom-brew-profile", JSON.stringify(profile));
-    }
-  }, [profile, storageReady]);
 
   const trends = useMemo(() => {
     return getTrendingKeywords(
@@ -233,76 +203,90 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     }
 
     if (authMode === "signup") {
-      signUp(email, password, name);
+      void signUp(email, password, name);
       return;
     }
 
-    signIn(email, password);
+    void signIn(email, password);
   }
 
-  function signUp(email: string, password: string, name: string) {
-    if (users.some((user) => user.email === email)) {
-      setAuthError("An account with this email already exists.");
-      return;
+  async function signUp(email: string, password: string, name: string) {
+    try {
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password, name }),
+      });
+      const data = (await response.json()) as { user?: DemoUser; error?: string };
+
+      if (!response.ok || !data.user) {
+        throw new Error(data.error ?? "Account could not be created.");
+      }
+
+      setCurrentUser(data.user);
+      setProfile(data.user.profile);
+      setAuthOpen(false);
+      clearAuthForm();
+      addNotification("Account created. Welcome to Bloom & Brew Social.");
+    } catch (error) {
+      setAuthError(
+        error instanceof Error ? error.message : "Account could not be created.",
+      );
     }
-
-    const nextProfile: SocialProfile = {
-      name,
-      username: email.split("@")[0].replace(/[^a-z0-9_]/gi, "").toLowerCase(),
-      bio: "New to Bloom & Brew Social.",
-      location: "Kuala Lumpur",
-      avatar: getInitials(name) || "BB",
-    };
-    const nextUser: DemoUser = {
-      id: crypto.randomUUID(),
-      email,
-      password,
-      profile: nextProfile,
-    };
-
-    setUsers((current) => [...current, nextUser]);
-    setCurrentUserId(nextUser.id);
-    setProfile(nextProfile);
-    setAuthOpen(false);
-    clearAuthForm();
-    addNotification("Account created. Welcome to Bloom & Brew Social.");
   }
 
-  function signIn(email: string, password: string) {
-    const user = users.find(
-      (storedUser) => storedUser.email === email && storedUser.password === password,
-    );
+  async function signIn(email: string, password: string) {
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = (await response.json()) as { user?: DemoUser; error?: string };
 
-    if (!user) {
-      setAuthError("Invalid email or password.");
-      return;
+      if (!response.ok || !data.user) {
+        throw new Error(data.error ?? "Invalid email or password.");
+      }
+
+      setCurrentUser(data.user);
+      setProfile(data.user.profile);
+      setAuthOpen(false);
+      clearAuthForm();
+      addNotification("Signed in successfully.");
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Invalid email or password.");
     }
-
-    setCurrentUserId(user.id);
-    setProfile(user.profile);
-    setAuthOpen(false);
-    clearAuthForm();
-    addNotification("Signed in successfully.");
   }
 
-  function signOut() {
-    setCurrentUserId(null);
+  async function signOut() {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+    });
+    setCurrentUser(null);
     setProfile(defaultProfile);
-    addNotification("Signed out of the demo account.");
+    addNotification("Signed out of your account.");
   }
 
   function updateProfile(nextProfile: SocialProfile) {
     setProfile(nextProfile);
 
-    if (!currentUserId) {
+    if (!currentUser) {
       return;
     }
 
-    setUsers((current) =>
-      current.map((user) =>
-        user.id === currentUserId ? { ...user, profile: nextProfile } : user,
-      ),
-    );
+    setCurrentUser({ ...currentUser, profile: nextProfile });
+
+    void fetch("/api/auth/me", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(nextProfile),
+    });
   }
 
   async function publishPost() {
