@@ -14,12 +14,16 @@ export type SocialComment = {
 
 export type SocialPost = {
   id: string;
+  source?: "bloom" | "reddit" | "youtube";
   author: string;
   username: string;
   avatar: string;
   community: string;
   content: string;
   imageUrl: string | null;
+  youtubeVideoId?: string;
+  youtubeUrl?: string;
+  youtubeChannel?: string;
   filter: string;
   location: string;
   createdAt: string;

@@ -50,6 +50,10 @@ const initialChatMessages: ChatMessage[] = [
   },
 ];
 
+function isDatabasePost(post: SocialPost) {
+  return post.source === "bloom" || post.community === "Bloom & Brew";
+}
+
 export function SocialApp({ redditPosts, source }: SocialAppProps) {
   const [storageReady, setStorageReady] = useState(false);
   const [currentUser, setCurrentUser] = useState<DemoUser | null>(null);
@@ -139,6 +143,44 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       active = false;
     };
   }, [profile.username, storageReady]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadYouTubePosts() {
+      try {
+        const response = await fetch("/api/youtube");
+        const data = (await response.json()) as { posts?: SocialPost[] };
+
+        if (!active || !data.posts?.length) {
+          return;
+        }
+
+        const youtubePosts = data.posts;
+
+        setPosts((current) => {
+          const youtubeIds = new Set(youtubePosts.map((post) => post.id));
+          const databasePosts = current.filter(isDatabasePost);
+          const otherPosts = current.filter(
+            (post) =>
+              !isDatabasePost(post) &&
+              post.source !== "youtube" &&
+              !youtubeIds.has(post.id),
+          );
+
+          return [...databasePosts, ...youtubePosts, ...otherPosts];
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    loadYouTubePosts();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const trends = useMemo(() => {
     return getTrendingKeywords(
@@ -344,9 +386,9 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     }
 
     const targetPost = posts.find((post) => post.id === postId);
-    const isDatabasePost = targetPost?.community === "Bloom & Brew";
+    const isPostInDatabase = targetPost ? isDatabasePost(targetPost) : false;
 
-    if (isDatabasePost) {
+    if (isPostInDatabase) {
       try {
         const response = await fetch(`/api/posts/${postId}/likes`, {
           method: "POST",
@@ -408,9 +450,9 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     }
 
     const targetPost = posts.find((post) => post.id === postId);
-    const isDatabasePost = targetPost?.community === "Bloom & Brew";
+    const isPostInDatabase = targetPost ? isDatabasePost(targetPost) : false;
 
-    if (isDatabasePost) {
+    if (isPostInDatabase) {
       try {
         const response = await fetch(`/api/posts/${postId}/bookmarks`, {
           method: "POST",
@@ -479,9 +521,9 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     }
 
     const targetPost = posts.find((post) => post.id === postId);
-    const isDatabasePost = targetPost?.community === "Bloom & Brew";
+    const isPostInDatabase = targetPost ? isDatabasePost(targetPost) : false;
 
-    if (isDatabasePost) {
+    if (isPostInDatabase) {
       try {
         const response = await fetch(`/api/posts/${postId}/comments`, {
           method: "POST",

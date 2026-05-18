@@ -43,7 +43,29 @@ export function FeedPost({
         </div>
       </div>
 
-      {post.imageUrl ? (
+      {post.youtubeVideoId ? (
+        <div className="px-5 pb-4">
+          <div className="overflow-hidden rounded-[6px] border border-[#eadfd4] bg-[#211f1d]">
+            <iframe
+              className="aspect-video w-full"
+              src={`https://www.youtube.com/embed/${post.youtubeVideoId}?autoplay=0&rel=0`}
+              title={post.content}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          </div>
+          {post.youtubeChannel ? (
+            <a
+              href={post.youtubeUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-flex text-sm font-black text-[#c45572] hover:underline"
+            >
+              Watch on YouTube · {post.youtubeChannel}
+            </a>
+          ) : null}
+        </div>
+      ) : post.imageUrl ? (
         <div className="px-5 pb-4">
           <div className="overflow-hidden rounded-[6px] border border-[#eadfd4] bg-[#fff8f2]">
             {/* eslint-disable-next-line @next/next/no-img-element */}

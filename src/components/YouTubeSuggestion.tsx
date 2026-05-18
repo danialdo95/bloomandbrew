@@ -2,24 +2,17 @@
 
 import { useEffect, useState } from "react";
 
-type Video = {
-  id: {
-    videoId: string;
-  };
-  snippet: {
-    title: string;
-  };
-};
+import type { SocialPost } from "@/types/social";
 
 export function YouTubeSuggestion() {
-  const [videos, setVideos] = useState<Video[]>([]);
+  const [videos, setVideos] = useState<SocialPost[]>([]);
 
   useEffect(() => {
     async function loadVideos() {
       const res = await fetch("/api/youtube");
       const data = await res.json();
 
-      setVideos(data.items || []);
+      setVideos(data.posts || []);
     }
 
     loadVideos();
@@ -35,18 +28,20 @@ export function YouTubeSuggestion() {
 
       <div className="space-y-4">
         {videos.map((video) => (
-          <div key={video.id.videoId}>
-            <iframe
-              className="w-full rounded-xl"
-              height="220"
-              src={`https://www.youtube.com/embed/${video.id.videoId}?autoplay=0&mute=1&rel=0`}
-              title={video.snippet.title}
-              allow="autoplay; encrypted-media; picture-in-picture"
-              allowFullScreen
-            />
+          <div key={video.id}>
+            {video.youtubeVideoId ? (
+              <iframe
+                className="w-full rounded-xl"
+                height="220"
+                src={`https://www.youtube.com/embed/${video.youtubeVideoId}?autoplay=0&mute=1&rel=0`}
+                title={video.content}
+                allow="autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen
+              />
+            ) : null}
 
             <p className="mt-2 text-sm font-semibold">
-              {video.snippet.title}
+              {video.content}
             </p>
           </div>
         ))}

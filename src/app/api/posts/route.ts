@@ -31,6 +31,7 @@ function toSocialPost(post: {
 }, viewer?: string): SocialPost {
   return {
     id: post.id,
+    source: "bloom",
     author: post.author.name,
     username: post.author.username,
     avatar: post.author.avatar,

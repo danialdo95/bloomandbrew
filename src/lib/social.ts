@@ -40,6 +40,7 @@ export const filterClasses: Record<string, string> = {
 export function seedSocialPosts(posts: RedditPost[]): SocialPost[] {
   return posts.slice(0, 8).map((post, index) => ({
     id: post.id,
+    source: "reddit",
     author: post.author,
     username: post.author.toLowerCase().replace(/[^a-z0-9_]/g, "") || "reddit_user",
     avatar: post.author.slice(0, 2).toUpperCase(),

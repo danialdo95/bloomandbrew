@@ -71,6 +71,10 @@ Browser UI (Next.js App Router)
         |      |-- Reddit fetch layer: src/lib/reddit.ts
         |      |-- Fallback post layer: src/lib/fallback-posts.ts
         |
+        |-- Next.js API Route: /api/youtube
+        |      |-- YouTube Data API search
+        |      |-- normalized video posts
+        |
         |-- Next.js API Route: /api/posts
         |      |-- Prisma client: src/lib/prisma.ts
         |      |-- PostgreSQL database
@@ -82,8 +86,8 @@ Browser UI (Next.js App Router)
 
 ```text
 Reddit API ──→ src/lib/reddit.ts ──→ server-rendered homepage ──┐
-                                                                ├─→ SocialApp feed
-PostgreSQL ─→ Prisma ─→ /api/posts ─────────────────────────────┘
+YouTube API ─→ /api/youtube ─→ normalized video posts ───────────┼─→ SocialApp feed
+PostgreSQL ─→ Prisma ─→ /api/posts ──────────────────────────────┘
 
 User-created posts:
 SocialApp composer ─→ POST /api/posts ─→ Prisma ─→ PostgreSQL
@@ -103,6 +107,7 @@ follows/chat/live/polls/share counters ─→ localStorage or React state
 | Styling | Tailwind CSS |
 | Backend/API | Next.js API Routes |
 | Social Media API | Reddit public JSON API |
+| Video Platform API | YouTube Data API |
 | Hosting | Leapcell |
 | Authentication | Custom database-backed authentication |
 | Database | Prisma Postgres / PostgreSQL |
@@ -150,10 +155,11 @@ If Reddit requests fail or return no usable posts, the app uses curated fallback
 # 6.2 Social Feed
 
 ## Description
-The homepage is a social feed powered by Reddit posts and PostgreSQL-backed user-created posts.
+The homepage is a social feed powered by Reddit posts, YouTube video suggestions, and PostgreSQL-backed user-created posts.
 
 ## Features
 - Reddit-seeded posts
+- YouTube API video posts
 - Database-backed user-created posts
 - Text post composer
 - Image URL attachment
@@ -163,10 +169,12 @@ The homepage is a social feed powered by Reddit posts and PostgreSQL-backed user
 - Comment system
 - Share counter
 - Save/bookmark state
+- Embedded YouTube videos inside feed posts
 
 ## Current Persistence Split
 - User-created post records are saved to PostgreSQL.
 - Reddit posts remain external feed content.
+- YouTube video posts remain external feed content.
 - Comments on database-backed posts are saved in PostgreSQL.
 - Comments on Reddit-sourced posts remain local UI state.
 - Likes and saves on database-backed posts are saved in PostgreSQL.
@@ -451,7 +459,41 @@ GET /api/reddit
 
 The `source` field can be either `reddit` or `fallback`.
 
-## 10.3 Internal Posts API Route
+---
+
+## 10.3 Internal YouTube API Route
+
+### Endpoint
+
+```http
+GET /api/youtube
+```
+
+### Description
+Fetches cafe, latte art, flower, and bouquet-related videos from the YouTube Data API, normalizes them into the same social feed shape as Reddit and Bloom & Brew posts, and returns them to the homepage feed. If `YOUTUBE_API_KEY` is missing or the API fails, the route returns a fallback feed item explaining that the key is not configured.
+
+### Response Shape
+
+```json
+{
+  "posts": [
+    {
+      "id": "youtube_VIDEO_ID",
+      "source": "youtube",
+      "community": "YouTube",
+      "content": "Video title",
+      "youtubeVideoId": "VIDEO_ID",
+      "youtubeUrl": "https://www.youtube.com/watch?v=VIDEO_ID",
+      "youtubeChannel": "Channel name"
+    }
+  ],
+  "source": "youtube"
+}
+```
+
+---
+
+## 10.4 Internal Posts API Route
 
 ### Endpoint
 
@@ -486,7 +528,6 @@ Creates a new Bloom & Brew post in PostgreSQL for the authenticated user.
   "content": "New cafe and bouquet idea",
   "imageUrl": "https://example.com/image.jpg",
   "filter": "Blush",
-  "location": "Kuala Lumpur",
   "location": "Kuala Lumpur"
 }
 ```
@@ -507,7 +548,7 @@ Creates a new Bloom & Brew post in PostgreSQL for the authenticated user.
 
 ---
 
-## 10.4 Internal Authentication API Routes
+## 10.5 Internal Authentication API Routes
 
 ### Endpoints
 
@@ -690,7 +731,7 @@ prisma.config.ts
 | Serving Port | `3000` |
 | Domain | Leapcell generated domain |
 | Database | Prisma Postgres / PostgreSQL |
-| Required Environment Variable | `DATABASE_URL` |
+| Required Environment Variables | `DATABASE_URL`, `YOUTUBE_API_KEY` |
 
 ## Current Production Start Script
 
@@ -731,6 +772,7 @@ For a real deployed social network, strengthen the current custom auth with:
 ## Completed
 - Leapcell deployment with `npm start`
 - Reddit feed integration with fallback data
+- YouTube Data API feed integration with fallback message
 - Social feed UI
 - Database-backed sign in/sign up modal
 - Database-backed profile personalization
@@ -740,6 +782,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - PostgreSQL-backed comments for database posts
 - PostgreSQL-backed likes for database posts
 - PostgreSQL-backed saves/bookmarks for database posts
+- Embedded YouTube video posts in the homepage feed
 - `GET /api/posts` and `POST /api/posts`
 - `POST /api/posts/[id]/comments`
 - `POST /api/posts/[id]/likes`
@@ -762,6 +805,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Comment persistence: database post comments persist in PostgreSQL, but Reddit post comments remain local
 - Like persistence: database post likes persist in PostgreSQL, but Reddit post likes remain local
 - Save persistence: database post bookmarks persist in PostgreSQL, but Reddit post saves remain local
+- YouTube persistence: YouTube video posts are fetched from the API and embedded in the feed, but they are external/read-only content like Reddit posts
 - User identity: real accounts exist, but there is no email verification, password reset, OAuth, or role-based authorization yet
 - Notifications: in-app only, with browser permission request but no push service worker
 - Media editing: CSS filters only
