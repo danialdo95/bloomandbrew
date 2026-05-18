@@ -104,7 +104,7 @@ export function AuthModal({
               value={authPassword}
               onChange={(event) => onPasswordChange(event.target.value)}
               className="mt-2 h-11 w-full rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-3 text-sm font-bold"
-              placeholder="Demo password"
+              placeholder="Password"
             />
           </label>
 
@@ -122,8 +122,7 @@ export function AuthModal({
           </button>
 
           <p className="text-center text-xs font-bold leading-5 text-[#8a7d73]">
-            Accounts are stored in PostgreSQL with a secure session cookie for this
-            prototype.
+            Bloom & Brew is a social experiment and not a real social network.
           </p>
         </form>
       </div>

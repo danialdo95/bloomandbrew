@@ -41,7 +41,19 @@ export function FeedPost({
             </span>
           </div>
           <p className="mt-1 text-sm font-bold text-[#c45572]">
-            {post.community} · {post.location}
+            {post.source === "reddit" && post.externalUrl ? (
+              <a
+                href={post.externalUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="hover:underline"
+              >
+                {post.community}
+              </a>
+            ) : (
+              <span>{post.community}</span>
+            )}{" "}
+            · {post.location}
           </p>
           <p className="mt-3 whitespace-pre-wrap text-base leading-7 text-[#211f1d]">
             {post.content}

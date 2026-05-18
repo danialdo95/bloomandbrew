@@ -59,6 +59,7 @@ export function seedSocialPosts(posts: RedditPost[]): SocialPost[] {
     username: post.author.toLowerCase().replace(/[^a-z0-9_]/g, "") || "reddit_user",
     avatar: post.author.slice(0, 2).toUpperCase(),
     community: `r/${post.subreddit}`,
+    externalUrl: post.permalink,
     content: post.title,
     imageUrl: post.imageUrl,
     filter: "Natural",

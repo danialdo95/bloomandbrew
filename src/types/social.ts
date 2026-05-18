@@ -25,6 +25,7 @@ export type SocialPost = {
   youtubeVideoId?: string;
   youtubeUrl?: string;
   youtubeChannel?: string;
+  externalUrl?: string;
   filter: string;
   location: string;
   createdAt: string;
