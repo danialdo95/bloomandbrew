@@ -76,6 +76,34 @@ async function main() {
     },
   });
 
+  await prisma.like.upsert({
+    where: {
+      postId_userIdentifier: {
+        postId: mayaPost.id,
+        userIdentifier: "leobrews",
+      },
+    },
+    update: {},
+    create: {
+      postId: mayaPost.id,
+      userIdentifier: "leobrews",
+    },
+  });
+
+  await prisma.like.upsert({
+    where: {
+      postId_userIdentifier: {
+        postId: leoPost.id,
+        userIdentifier: "mayablooms",
+      },
+    },
+    update: {},
+    create: {
+      postId: leoPost.id,
+      userIdentifier: "mayablooms",
+    },
+  });
+
   console.log("Seeded Bloom & Brew starter data.");
 }
 

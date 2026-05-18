@@ -6,6 +6,7 @@ async function main() {
     include: {
       author: true,
       comments: true,
+      likes: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -13,7 +14,7 @@ async function main() {
   });
 
   console.log(
-    `✅ Connected${post ? ` — latest post by ${post.author.username} with ${post.comments.length} comments` : ""}`,
+    `✅ Connected${post ? ` — latest post by ${post.author.username} with ${post.comments.length} comments and ${post.likes.length} likes` : ""}`,
   );
 }
 

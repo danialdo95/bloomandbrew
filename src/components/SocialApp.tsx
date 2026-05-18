@@ -106,8 +106,15 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     let active = true;
 
     async function loadDatabasePosts() {
+      if (!storageReady) {
+        return;
+      }
+
       try {
-        const response = await fetch("/api/posts");
+        const params = new URLSearchParams({
+          viewer: profile.username,
+        });
+        const response = await fetch(`/api/posts?${params.toString()}`);
 
         if (!response.ok) {
           throw new Error(`Post fetch failed with status ${response.status}`);
@@ -136,7 +143,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [profile.username, storageReady]);
 
   useEffect(() => {
     if (storageReady) {
@@ -347,9 +354,54 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     }
   }
 
-  function toggleLike(postId: string) {
+  async function toggleLike(postId: string) {
     if (!requireAuth("like posts")) {
       return;
+    }
+
+    const targetPost = posts.find((post) => post.id === postId);
+    const isDatabasePost = targetPost?.community === "Bloom & Brew";
+
+    if (isDatabasePost) {
+      try {
+        const response = await fetch(`/api/posts/${postId}/likes`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            profile,
+          }),
+        });
+        const data = (await response.json()) as {
+          liked?: boolean;
+          likes?: number;
+          error?: string;
+        };
+
+        if (!response.ok || typeof data.liked !== "boolean" || typeof data.likes !== "number") {
+          throw new Error(data.error ?? "Like could not be recorded.");
+        }
+
+        setPosts((current) =>
+          current.map((post) =>
+            post.id === postId
+              ? {
+                  ...post,
+                  liked: data.liked as boolean,
+                  likes: data.likes as number,
+                }
+              : post,
+          ),
+        );
+        addNotification(data.liked ? "Post liked." : "Post unliked.");
+        return;
+      } catch (error) {
+        addNotification(
+          error instanceof Error ? error.message : "Like could not be recorded.",
+        );
+        return;
+      }
     }
 
     setPosts((current) =>

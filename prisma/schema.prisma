@@ -31,6 +31,7 @@ model Post {
   location  String?
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   comments  Comment[]
+  likes     Like[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -47,5 +48,16 @@ model Comment {
   post           Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   createdAt      DateTime @default(now())
 
+  @@index([postId])
+}
+
+model Like {
+  id             String   @id @default(cuid())
+  postId         String
+  userIdentifier String
+  post           Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  @@unique([postId, userIdentifier])
   @@index([postId])
 }

@@ -16,12 +16,15 @@ function toSocialPost(post: {
     authorName: string;
     text: string;
   }[];
+  likes: {
+    userIdentifier: string;
+  }[];
   author: {
     name: string;
     username: string;
     avatar: string;
   };
-}): SocialPost {
+}, viewer?: string): SocialPost {
   return {
     id: post.id,
     author: post.author.name,
@@ -33,14 +36,14 @@ function toSocialPost(post: {
     filter: post.filter,
     location: post.location ?? "Bloom & Brew Social",
     createdAt: post.createdAt.toISOString(),
-    likes: 0,
+    likes: post.likes.length,
     shares: 0,
     comments: post.comments.map((comment) => ({
       id: comment.id,
       author: comment.authorName,
       text: comment.text,
     })),
-    liked: false,
+    liked: viewer ? post.likes.some((like) => like.userIdentifier === viewer) : false,
     bookmarked: false,
   };
 }
@@ -49,7 +52,9 @@ function normalizeUsername(value: string) {
   return value.replace(/[^a-z0-9_]/gi, "").toLowerCase() || "bloombarista";
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const viewer = searchParams.get("viewer") ?? undefined;
   const posts = await prisma.post.findMany({
     include: {
       author: true,
@@ -58,6 +63,7 @@ export async function GET() {
           createdAt: "asc",
         },
       },
+      likes: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -66,7 +72,7 @@ export async function GET() {
   });
 
   return NextResponse.json({
-    posts: posts.map(toSocialPost),
+    posts: posts.map((post) => toSocialPost(post, viewer)),
   });
 }
 
@@ -138,6 +144,7 @@ export async function POST(request: Request) {
     include: {
       author: true,
       comments: true,
+      likes: true,
     },
   });
 
