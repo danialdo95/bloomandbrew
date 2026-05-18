@@ -12,7 +12,6 @@ import { SuggestedFollows } from "@/components/social/SuggestedFollows";
 import {
   defaultProfile,
   seedSocialPosts,
-  suggestedPeople,
 } from "@/lib/social";
 import { getTrendingKeywords } from "@/lib/trends";
 import type { RedditPost } from "@/types/reddit";
@@ -22,6 +21,7 @@ import type {
   NotificationItem,
   SocialPost,
   SocialProfile,
+  SuggestedPerson,
 } from "@/types/social";
 
 type SocialAppProps = {
@@ -64,7 +64,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   const [filter, setFilter] = useState("Natural");
   const [location, setLocation] = useState("Bloom & Brew Social");
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
-  const [following, setFollowing] = useState<string[]>(["petalnotes"]);
+  const [suggestedFollows, setSuggestedFollows] = useState<SuggestedPerson[]>([]);
   const [notifications, setNotifications] =
     useState<NotificationItem[]>(initialNotifications);
   const [chatMessages, setChatMessages] =
@@ -143,6 +143,34 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       active = false;
     };
   }, [profile.username, storageReady]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadSuggestedFollows() {
+      if (!isAuthenticated) {
+        setSuggestedFollows([]);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/users/suggestions");
+        const data = (await response.json()) as { people?: SuggestedPerson[] };
+
+        if (active) {
+          setSuggestedFollows(data.people ?? []);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    loadSuggestedFollows();
+
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     let active = true;
@@ -596,18 +624,45 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     addNotification("Your comment was added.");
   }
 
-  function toggleFollow(username: string) {
+  async function toggleFollow(person: SuggestedPerson) {
     if (!requireAuth("follow creators")) {
       return;
     }
 
-    setFollowing((current) => {
-      const isFollowing = current.includes(username);
-      return isFollowing
-        ? current.filter((item) => item !== username)
-        : [...current, username];
-    });
-    addNotification(`Updated follow status for @${username}.`);
+    if (!person.id) {
+      addNotification("This suggested creator is not available yet.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/users/${person.id}/follow`, {
+        method: "POST",
+      });
+      const data = (await response.json()) as {
+        isFollowing?: boolean;
+        username?: string;
+        error?: string;
+      };
+
+      if (!response.ok || typeof data.isFollowing !== "boolean") {
+        throw new Error(data.error ?? "Follow status could not be updated.");
+      }
+
+      setSuggestedFollows((current) =>
+        current.map((item) =>
+          item.id === person.id ? { ...item, isFollowing: data.isFollowing } : item,
+        ),
+      );
+      addNotification(
+        data.isFollowing
+          ? `You are now following @${data.username ?? person.username}.`
+          : `You unfollowed @${data.username ?? person.username}.`,
+      );
+    } catch (error) {
+      addNotification(
+        error instanceof Error ? error.message : "Follow status could not be updated.",
+      );
+    }
   }
 
   function requestBrowserNotification() {
@@ -700,8 +755,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
             onCreateAccount={() => openAuth("signup")}
           />
           <SuggestedFollows
-            people={suggestedPeople}
-            following={following}
+            people={suggestedFollows}
             onToggleFollow={toggleFollow}
           />
         </aside>

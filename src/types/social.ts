@@ -56,8 +56,10 @@ export type DemoUser = {
 };
 
 export type SuggestedPerson = {
+  id?: string;
   name: string;
   username: string;
   bio: string;
   avatar: string;
+  isFollowing?: boolean;
 };
