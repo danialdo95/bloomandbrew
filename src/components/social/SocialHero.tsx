@@ -18,13 +18,13 @@ export function SocialHero({
 }: SocialHeroProps) {
   return (
     <section className="border-b border-[#eadfd4] bg-white">
-      <div className="mx-auto max-w-7xl px-5 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 md:px-5 md:py-8">
         <p className="text-sm font-black uppercase tracking-[0.2em] text-[#c45572]">
           Social media mode
         </p>
         <div className="mt-3 grid gap-5 lg:grid-cols-[1fr_360px] lg:items-end">
           <div>
-            <h1 className="max-w-4xl text-4xl font-black leading-tight text-[#211f1d] md:text-6xl">
+            <h1 className="max-w-4xl text-3xl font-black leading-tight text-[#211f1d] md:text-6xl">
               Bloom & Brew is now a social feed for cafe and floral culture.
             </h1>
             <p className="mt-4 max-w-3xl text-lg leading-8 text-[#6f6259]">

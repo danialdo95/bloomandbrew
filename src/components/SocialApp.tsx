@@ -211,6 +211,14 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     ]);
   }
 
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("bloom-notifications", {
+        detail: notifications,
+      }),
+    );
+  }, [notifications]);
+
   function openAuth(mode: "signin" | "signup") {
     setAuthMode(mode);
     setAuthError("");
@@ -682,8 +690,8 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         onSignOut={signOut}
       />
 
-      <section className="mx-auto grid max-w-7xl gap-5 px-5 py-6 lg:grid-cols-[280px_1fr_320px]">
-        <aside className="space-y-5">
+      <section className="mx-auto grid max-w-7xl gap-5 px-4 py-5 md:px-5 md:py-6 lg:grid-cols-[280px_1fr_320px]">
+        <aside className="order-2 space-y-5 lg:order-none">
           <ProfilePanel
             profile={profile}
             isAuthenticated={isAuthenticated}
@@ -698,7 +706,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
           />
         </aside>
 
-        <section className="space-y-5">
+        <section className="order-1 space-y-5 lg:order-none">
           <PostComposer
             profile={profile}
             content={content}
@@ -738,7 +746,6 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         </section>
 
         <SocialSidebar
-          notifications={notifications}
           chatMessages={chatMessages}
           chatDraft={chatDraft}
           live={live}

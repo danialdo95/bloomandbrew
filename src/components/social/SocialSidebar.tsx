@@ -1,8 +1,7 @@
 import { TrendTags } from "@/components/TrendTags";
-import type { ChatMessage, NotificationItem } from "@/types/social";
+import type { ChatMessage } from "@/types/social";
 
 type SocialSidebarProps = {
-  notifications: NotificationItem[];
   chatMessages: ChatMessage[];
   chatDraft: string;
   live: boolean;
@@ -14,7 +13,6 @@ type SocialSidebarProps = {
 };
 
 export function SocialSidebar({
-  notifications,
   chatMessages,
   chatDraft,
   live,
@@ -25,24 +23,7 @@ export function SocialSidebar({
   onToggleLive,
 }: SocialSidebarProps) {
   return (
-    <aside className="space-y-5">
-      <section className="rounded-[6px] border border-[#eadfd4] bg-white p-5 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
-        <div className="flex items-center justify-between">
-          <h2 className="font-black text-[#211f1d]">Notifications</h2>
-          <span className="rounded-full bg-[#fff176] px-2 py-1 text-xs font-black">
-            {notifications.length}
-          </span>
-        </div>
-        <div className="mt-4 space-y-3">
-          {notifications.map((item) => (
-            <div key={item.id} className="rounded-[6px] bg-[#fff8f2] p-3">
-              <p className="text-sm font-bold leading-6 text-[#211f1d]">{item.text}</p>
-              <p className="mt-1 text-xs font-bold text-[#8a7d73]">{item.createdAt}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
+    <aside className="order-3 space-y-5 lg:order-none">
       <section className="rounded-[6px] border border-[#eadfd4] bg-white p-5 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
         <h2 className="font-black text-[#211f1d]">In-app chat</h2>
         <div className="mt-4 max-h-72 space-y-3 overflow-y-auto">
