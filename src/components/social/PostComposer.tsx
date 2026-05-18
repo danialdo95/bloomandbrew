@@ -1,4 +1,4 @@
-import { filterClasses } from "@/lib/social";
+import { filterClasses, filterStyles } from "@/lib/social";
 import type { SocialProfile } from "@/types/social";
 
 type PostComposerProps = {
@@ -39,34 +39,59 @@ export function PostComposer({
           {profile.avatar}
         </div>
         <div className="flex-1">
+          <label className="block">
+            <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-[#c45572]">
+              Create a post
+            </span>
           <textarea
             value={content}
             onChange={(event) => onContentChange(event.target.value)}
             placeholder="Share a cafe visit, bouquet idea, latte art moment..."
             className="min-h-24 w-full resize-none rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-4 py-3 text-sm font-bold text-[#211f1d]"
           />
+          </label>
           <div className="mt-3 grid gap-3 md:grid-cols-3">
-            <input
-              value={imageUrl}
-              onChange={(event) => onImageUrlChange(event.target.value)}
-              placeholder="Image URL"
-              className="h-10 rounded-[6px] border border-[#eadfd4] bg-white px-3 text-sm font-bold"
-            />
-            <select
-              value={filter}
-              onChange={(event) => onFilterChange(event.target.value)}
-              className="h-10 rounded-[6px] border border-[#eadfd4] bg-white px-3 text-sm font-bold"
-            >
-              {Object.keys(filterClasses).map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-            <input
-              value={location}
-              onChange={(event) => onLocationChange(event.target.value)}
-              placeholder="Location"
-              className="h-10 rounded-[6px] border border-[#eadfd4] bg-white px-3 text-sm font-bold"
-            />
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.12em] text-[#8a7d73]">
+                Photo link
+              </span>
+              <input
+                value={imageUrl}
+                onChange={(event) => onImageUrlChange(event.target.value)}
+                placeholder="Paste image URL"
+                className="h-10 w-full rounded-[6px] border border-[#eadfd4] bg-white px-3 text-sm font-bold"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.12em] text-[#8a7d73]">
+                Image filter
+              </span>
+              <select
+                value={filter}
+                onChange={(event) => onFilterChange(event.target.value)}
+                className="h-10 w-full rounded-[6px] border border-[#eadfd4] bg-white px-3 text-sm font-bold"
+              >
+                {Object.keys(filterClasses).map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.12em] text-[#8a7d73]">
+                Location
+              </span>
+              <div className="flex h-10 items-center rounded-[6px] border border-[#eadfd4] bg-white px-3">
+                <span aria-hidden="true" className="mr-2 text-sm">
+                  📍
+                </span>
+                <input
+                  value={location}
+                  onChange={(event) => onLocationChange(event.target.value)}
+                  placeholder="Add location"
+                  className="min-w-0 flex-1 bg-transparent text-sm font-bold outline-none"
+                />
+              </div>
+            </label>
           </div>
 
           {imageUrl ? (
@@ -76,6 +101,7 @@ export function PostComposer({
                 src={imageUrl}
                 alt=""
                 className={`max-h-64 w-full object-cover ${filterClasses[filter]}`}
+                style={filterStyles[filter] ?? filterStyles.Natural}
               />
             </div>
           ) : null}
@@ -87,7 +113,7 @@ export function PostComposer({
                 onClick={onUseCurrentLocation}
                 className="rounded-full bg-[#fff8f2] px-3 py-2 text-xs font-black text-[#211f1d]"
               >
-                Tag location
+                📍 Use my location
               </button>
               <button
                 type="button"

@@ -1,4 +1,4 @@
-import { filterClasses, getTimeLabel } from "@/lib/social";
+import { filterClasses, filterStyles, getTimeLabel } from "@/lib/social";
 import type { SocialPost } from "@/types/social";
 
 type FeedPostProps = {
@@ -73,6 +73,7 @@ export function FeedPost({
               src={post.imageUrl}
               alt=""
               className={`max-h-[520px] w-full object-cover ${filterClasses[post.filter]}`}
+              style={filterStyles[post.filter] ?? filterStyles.Natural}
             />
           </div>
         </div>

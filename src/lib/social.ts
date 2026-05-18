@@ -1,5 +1,6 @@
 import type { RedditPost } from "@/types/reddit";
 import type { SocialPost, SocialProfile, SuggestedPerson } from "@/types/social";
+import type { CSSProperties } from "react";
 
 export const defaultProfile: SocialProfile = {
   name: "Bloom Barista",
@@ -35,6 +36,19 @@ export const filterClasses: Record<string, string> = {
   Blush: "saturate-125 sepia-[0.12]",
   Cream: "brightness-105 contrast-90",
   Vintage: "sepia-[0.35] contrast-95",
+};
+
+export const filterStyles: Record<string, CSSProperties> = {
+  Natural: {},
+  Blush: {
+    filter: "saturate(1.3) sepia(0.18) hue-rotate(325deg) brightness(1.04)",
+  },
+  Cream: {
+    filter: "brightness(1.14) contrast(0.88) saturate(0.92)",
+  },
+  Vintage: {
+    filter: "sepia(0.55) contrast(0.9) saturate(0.85)",
+  },
 };
 
 export function seedSocialPosts(posts: RedditPost[]): SocialPost[] {
