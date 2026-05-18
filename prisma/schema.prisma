@@ -32,6 +32,7 @@ model Post {
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   comments  Comment[]
   likes     Like[]
+  savedBy   SavedPost[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -52,6 +53,17 @@ model Comment {
 }
 
 model Like {
+  id             String   @id @default(cuid())
+  postId         String
+  userIdentifier String
+  post           Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  @@unique([postId, userIdentifier])
+  @@index([postId])
+}
+
+model SavedPost {
   id             String   @id @default(cuid())
   postId         String
   userIdentifier String

@@ -19,6 +19,9 @@ function toSocialPost(post: {
   likes: {
     userIdentifier: string;
   }[];
+  savedBy: {
+    userIdentifier: string;
+  }[];
   author: {
     name: string;
     username: string;
@@ -44,7 +47,9 @@ function toSocialPost(post: {
       text: comment.text,
     })),
     liked: viewer ? post.likes.some((like) => like.userIdentifier === viewer) : false,
-    bookmarked: false,
+    bookmarked: viewer
+      ? post.savedBy.some((save) => save.userIdentifier === viewer)
+      : false,
   };
 }
 
@@ -64,6 +69,7 @@ export async function GET(request: Request) {
         },
       },
       likes: true,
+      savedBy: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -145,6 +151,7 @@ export async function POST(request: Request) {
       author: true,
       comments: true,
       likes: true,
+      savedBy: true,
     },
   });
 

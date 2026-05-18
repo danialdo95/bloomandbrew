@@ -14,7 +14,7 @@ Bloom & Brew Social is a web-based social media prototype focused on cafe cultur
 
 The latest implementation is no longer only a dashboard. It now behaves like a social media application where users can create a demo account, personalize a profile, publish posts, interact with posts, follow suggested creators, receive in-app notifications, chat, start a live-room demo, add image filters, and tag locations.
 
-The first database migration steps have also been completed. User-created posts, comments on database-backed posts, and likes on database-backed posts are now stored in PostgreSQL through Prisma ORM, while demo authentication and secondary interactions such as saves, follows, chat, and notifications remain browser-local.
+The first database migration steps have also been completed. User-created posts, comments, likes, and saves/bookmarks on database-backed posts are now stored in PostgreSQL through Prisma ORM, while demo authentication and secondary interactions such as follows, chat, and notifications remain browser-local.
 
 The application demonstrates:
 - Managed communities
@@ -164,7 +164,9 @@ The homepage is a social feed powered by Reddit posts and PostgreSQL-backed user
 - Reddit posts remain external feed content.
 - Comments on database-backed posts are saved in PostgreSQL.
 - Comments on Reddit-sourced posts remain local UI state.
-- Likes, saves, and shares remain local UI state and are not yet stored in PostgreSQL.
+- Likes and saves on database-backed posts are saved in PostgreSQL.
+- Likes and saves on Reddit-sourced posts remain local UI state.
+- Shares remain local UI state and are not yet stored in PostgreSQL.
 
 ---
 
@@ -366,7 +368,7 @@ The Community page demonstrates polls and community participation.
 | FR-03 | Users shall sign up and sign in | Implemented as demo localStorage auth |
 | FR-04 | Users shall personalize profiles | Implemented |
 | FR-05 | Users shall publish posts | Implemented with PostgreSQL persistence |
-| FR-06 | Users shall like, comment, save, and share posts | Likes and comments are database-backed for DB posts; saves and shares are local |
+| FR-06 | Users shall like, comment, save, and share posts | Likes, comments, and saves are database-backed for DB posts; shares are local |
 | FR-07 | Users shall follow creators | Implemented locally |
 | FR-08 | Users shall view trending topics | Implemented |
 | FR-09 | Users shall participate in polls | Implemented locally |
@@ -669,15 +671,18 @@ For a real deployed social network, replace localStorage demo authentication wit
 - PostgreSQL-backed post creation
 - PostgreSQL-backed comments for database posts
 - PostgreSQL-backed likes for database posts
+- PostgreSQL-backed saves/bookmarks for database posts
 - `GET /api/posts` and `POST /api/posts`
 - `POST /api/posts/[id]/comments`
 - `POST /api/posts/[id]/likes`
+- `POST /api/posts/[id]/bookmarks`
 - Prisma schema, migrations, generated client, seed script, and verification script
 - Image URL posting and CSS filter selection
 - Location tagging in the composer
-- Local shares and saves
+- Local shares
 - Local comments for Reddit-sourced posts
 - Local likes for Reddit-sourced posts
+- Local saves/bookmarks for Reddit-sourced posts
 - Local suggested follows
 - In-app notifications and browser notification permission request
 - Local chat demo
@@ -690,6 +695,7 @@ For a real deployed social network, replace localStorage demo authentication wit
 - Feed persistence: user-created posts persist in PostgreSQL, but Reddit posts remain external and interactions remain local
 - Comment persistence: database post comments persist in PostgreSQL, but Reddit post comments remain local
 - Like persistence: database post likes persist in PostgreSQL, but Reddit post likes remain local
+- Save persistence: database post bookmarks persist in PostgreSQL, but Reddit post saves remain local
 - Notifications: in-app only, with browser permission request but no push service worker
 - Media editing: CSS filters only
 - Geolocation: coordinate tagging only, no map/location search
@@ -698,7 +704,6 @@ For a real deployed social network, replace localStorage demo authentication wit
 - Real server-side authentication
 - Password hashing or OAuth
 - Database-backed sessions
-- Database-backed saves/bookmarks
 - Database-backed follows/friend requests
 - Database-backed notifications
 - Database-backed chat messages
@@ -714,7 +719,7 @@ For a real deployed social network, replace localStorage demo authentication wit
 
 - Authentication is demo-only and browser-local
 - User-created posts are stored in PostgreSQL, but post ownership is still based on demo profile data until real auth is added
-- Comments and likes on Reddit posts, bookmarks, follows, polls, notifications, and chat are local-only
+- Comments, likes, and saves on Reddit posts, plus follows, polls, notifications, and chat are local-only
 - Chat is not real-time between users
 - Live room is a state demo, not video/audio streaming
 - No server-side user authorization is implemented
@@ -724,7 +729,7 @@ For a real deployed social network, replace localStorage demo authentication wit
 # 17. Future Improvements
 
 - Real authentication with NextAuth, Supabase Auth, or custom auth
-- Extend PostgreSQL persistence to saves, follows, notifications, and messages
+- Extend PostgreSQL persistence to follows, notifications, and messages
 - Real-time chat with WebSockets or Supabase Realtime
 - File upload for media instead of image URLs
 - Push notifications through service workers

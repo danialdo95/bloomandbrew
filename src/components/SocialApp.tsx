@@ -418,9 +418,49 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     addNotification("A feed interaction was recorded.");
   }
 
-  function toggleBookmark(postId: string) {
+  async function toggleBookmark(postId: string) {
     if (!requireAuth("save posts")) {
       return;
+    }
+
+    const targetPost = posts.find((post) => post.id === postId);
+    const isDatabasePost = targetPost?.community === "Bloom & Brew";
+
+    if (isDatabasePost) {
+      try {
+        const response = await fetch(`/api/posts/${postId}/bookmarks`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            profile,
+          }),
+        });
+        const data = (await response.json()) as {
+          bookmarked?: boolean;
+          error?: string;
+        };
+
+        if (!response.ok || typeof data.bookmarked !== "boolean") {
+          throw new Error(data.error ?? "Save could not be recorded.");
+        }
+
+        const bookmarked = data.bookmarked;
+
+        setPosts((current) =>
+          current.map((post) =>
+            post.id === postId ? { ...post, bookmarked } : post,
+          ),
+        );
+        addNotification(bookmarked ? "Post saved." : "Post removed from saved.");
+        return;
+      } catch (error) {
+        addNotification(
+          error instanceof Error ? error.message : "Save could not be recorded.",
+        );
+        return;
+      }
     }
 
     setPosts((current) =>
@@ -658,7 +698,9 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
               commentDraft={commentDrafts[post.id] ?? ""}
               onLike={toggleLike}
               onShare={sharePost}
-              onBookmark={toggleBookmark}
+              onBookmark={(postId) => {
+                void toggleBookmark(postId);
+              }}
               onCommentDraftChange={(postId, value) =>
                 setCommentDrafts((current) => ({ ...current, [postId]: value }))
               }

@@ -7,6 +7,7 @@ async function main() {
       author: true,
       comments: true,
       likes: true,
+      savedBy: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -14,7 +15,7 @@ async function main() {
   });
 
   console.log(
-    `✅ Connected${post ? ` — latest post by ${post.author.username} with ${post.comments.length} comments and ${post.likes.length} likes` : ""}`,
+    `✅ Connected${post ? ` — latest post by ${post.author.username} with ${post.comments.length} comments, ${post.likes.length} likes, and ${post.savedBy.length} saves` : ""}`,
   );
 }
 
