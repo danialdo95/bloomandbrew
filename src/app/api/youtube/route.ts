@@ -40,6 +40,7 @@ const fallbackVideos: SocialPost[] = [
     createdAt: new Date(0).toISOString(),
     likes: 0,
     shares: 0,
+    externalCommentCount: 0,
     comments: [],
     liked: false,
     bookmarked: false,
@@ -73,11 +74,13 @@ function toSocialPost(item: YouTubeSearchItem): SocialPost | null {
     createdAt: snippet.publishedAt ?? new Date().toISOString(),
     likes: 0,
     shares: 0,
+    externalCommentCount: 0,
     comments: [
       {
         id: `youtube-${videoId}-comment`,
         author: "Bloom & Brew",
         text: "Suggested from YouTube for cafe and floral inspiration.",
+        system: true,
       },
     ],
     liked: false,

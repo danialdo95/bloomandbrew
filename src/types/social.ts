@@ -10,6 +10,7 @@ export type SocialComment = {
   id: string;
   author: string;
   text: string;
+  system?: boolean;
 };
 
 export type SocialPost = {
@@ -29,6 +30,7 @@ export type SocialPost = {
   createdAt: string;
   likes: number;
   shares: number;
+  externalCommentCount?: number;
   comments: SocialComment[];
   liked: boolean;
   bookmarked: boolean;

@@ -20,6 +20,12 @@ export function FeedPost({
   onCommentDraftChange,
   onAddComment,
 }: FeedPostProps) {
+  const userCommentCount = post.comments.filter((comment) => !comment.system).length;
+  const commentCount =
+    post.source === "reddit" || post.source === "youtube"
+      ? (post.externalCommentCount ?? 0) + userCommentCount
+      : post.comments.length;
+
   return (
     <article className="rounded-[6px] border border-[#eadfd4] bg-white shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
       <div className="flex items-start gap-3 p-5">
@@ -101,7 +107,9 @@ export function FeedPost({
         >
           {post.bookmarked ? "Saved" : "Save"}
         </button>
-        <span className="px-3 py-3 text-center">{post.comments.length} comments</span>
+        <span className="px-3 py-3 text-center">
+          {commentCount} {commentCount === 1 ? "comment" : "comments"}
+        </span>
       </div>
 
       <div className="space-y-3 p-5">

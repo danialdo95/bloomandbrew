@@ -66,11 +66,13 @@ export function seedSocialPosts(posts: RedditPost[]): SocialPost[] {
     createdAt: post.createdAt,
     likes: post.score,
     shares: Math.max(Math.round(post.comments / 3), 3),
+    externalCommentCount: post.comments,
     comments: [
       {
         id: `${post.id}-comment`,
         author: "Bloom & Brew",
         text: `${post.comments.toLocaleString()} Reddit comments are part of this conversation.`,
+        system: true,
       },
     ],
     liked: false,
