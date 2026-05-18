@@ -11,6 +11,11 @@ function toSocialPost(post: {
   filter: string;
   location: string | null;
   createdAt: Date;
+  comments: {
+    id: string;
+    authorName: string;
+    text: string;
+  }[];
   author: {
     name: string;
     username: string;
@@ -30,7 +35,11 @@ function toSocialPost(post: {
     createdAt: post.createdAt.toISOString(),
     likes: 0,
     shares: 0,
-    comments: [],
+    comments: post.comments.map((comment) => ({
+      id: comment.id,
+      author: comment.authorName,
+      text: comment.text,
+    })),
     liked: false,
     bookmarked: false,
   };
@@ -44,6 +53,11 @@ export async function GET() {
   const posts = await prisma.post.findMany({
     include: {
       author: true,
+      comments: {
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -123,6 +137,7 @@ export async function POST(request: Request) {
     },
     include: {
       author: true,
+      comments: true,
     },
   });
 

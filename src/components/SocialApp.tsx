@@ -391,7 +391,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     addNotification("Post shared with your community.");
   }
 
-  function addComment(postId: string) {
+  async function addComment(postId: string) {
     if (!requireAuth("comment")) {
       return;
     }
@@ -400,6 +400,53 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
 
     if (!text) {
       return;
+    }
+
+    const targetPost = posts.find((post) => post.id === postId);
+    const isDatabasePost = targetPost?.community === "Bloom & Brew";
+
+    if (isDatabasePost) {
+      try {
+        const response = await fetch(`/api/posts/${postId}/comments`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text,
+            profile,
+          }),
+        });
+        const data = (await response.json()) as {
+          comment?: SocialPost["comments"][number];
+          error?: string;
+        };
+
+        if (!response.ok || !data.comment) {
+          throw new Error(data.error ?? "Comment could not be added.");
+        }
+
+        const savedComment = data.comment;
+
+        setPosts((current) =>
+          current.map((post) =>
+            post.id === postId
+              ? {
+                  ...post,
+                  comments: [...post.comments, savedComment],
+                }
+              : post,
+          ),
+        );
+        setCommentDrafts((current) => ({ ...current, [postId]: "" }));
+        addNotification("Your comment was saved to the database.");
+        return;
+      } catch (error) {
+        addNotification(
+          error instanceof Error ? error.message : "Comment could not be added.",
+        );
+        return;
+      }
     }
 
     setPosts((current) =>
@@ -563,7 +610,9 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
               onCommentDraftChange={(postId, value) =>
                 setCommentDrafts((current) => ({ ...current, [postId]: value }))
               }
-              onAddComment={addComment}
+              onAddComment={(postId) => {
+                void addComment(postId);
+              }}
             />
           ))}
         </section>

@@ -5,6 +5,7 @@ async function main() {
   const post = await prisma.post.findFirst({
     include: {
       author: true,
+      comments: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -12,7 +13,7 @@ async function main() {
   });
 
   console.log(
-    `✅ Connected${post ? ` — latest post by ${post.author.username}` : ""}`,
+    `✅ Connected${post ? ` — latest post by ${post.author.username} with ${post.comments.length} comments` : ""}`,
   );
 }
 

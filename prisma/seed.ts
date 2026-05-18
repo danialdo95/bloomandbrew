@@ -24,7 +24,7 @@ async function main() {
     },
   });
 
-  await prisma.post.upsert({
+  const mayaPost = await prisma.post.upsert({
     where: { id: "seed-post-maya" },
     update: {},
     create: {
@@ -37,7 +37,7 @@ async function main() {
     },
   });
 
-  await prisma.post.upsert({
+  const leoPost = await prisma.post.upsert({
     where: { id: "seed-post-leo" },
     update: {},
     create: {
@@ -47,6 +47,32 @@ async function main() {
       imageUrl:
         "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1200&q=80",
       location: "Petaling Jaya",
+    },
+  });
+
+  await prisma.comment.upsert({
+    where: { id: "seed-comment-maya" },
+    update: {},
+    create: {
+      id: "seed-comment-maya",
+      postId: mayaPost.id,
+      authorName: "Bloom & Brew",
+      authorUsername: "bloomandbrew",
+      authorAvatar: "BB",
+      text: "This is the first database-backed comment on a Bloom & Brew post.",
+    },
+  });
+
+  await prisma.comment.upsert({
+    where: { id: "seed-comment-leo" },
+    update: {},
+    create: {
+      id: "seed-comment-leo",
+      postId: leoPost.id,
+      authorName: "Petal Notes",
+      authorUsername: "petalnotes",
+      authorAvatar: "PN",
+      text: "Honey oat latte with tulips sounds like a soft launch winner.",
     },
   });
 

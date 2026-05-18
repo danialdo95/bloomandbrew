@@ -30,8 +30,22 @@ model Post {
   filter    String   @default("Natural")
   location  String?
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments  Comment[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([authorId])
+}
+
+model Comment {
+  id             String   @id @default(cuid())
+  postId         String
+  authorName     String
+  authorUsername String
+  authorAvatar   String   @default("BB")
+  text           String
+  post           Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  @@index([postId])
 }
