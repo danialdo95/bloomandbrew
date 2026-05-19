@@ -14,7 +14,7 @@ Bloom & Brew Social is a web-based social media prototype focused on cafe cultur
 
 The latest implementation is no longer only a dashboard. It now behaves like a social media application where users can create an account, personalize a profile, publish posts, interact with posts, follow suggested creators, receive in-app notifications, chat, start a live-room demo, add image filters, and tag locations.
 
-The first database migration steps have also been completed. User accounts, sessions, user-created posts, comments, likes, and saves/bookmarks on database-backed posts are now stored in PostgreSQL through Prisma ORM, while secondary interactions such as follows, chat, and notifications remain browser-local.
+The first database migration steps have also been completed. User accounts, sessions, user-created posts, comments, likes, saves/bookmarks, and follow relationships are now stored in PostgreSQL through Prisma ORM, while secondary interactions such as chat, notifications, polls, and share counters remain browser-local.
 
 The application demonstrates:
 - Managed communities
@@ -59,7 +59,7 @@ Browser UI (Next.js App Router)
         |      |-- authenticated user state
         |      |-- profile state
         |      |-- Reddit + database post feed
-        |      |-- local-only interactions
+        |      |-- database-backed post/follow interactions
         |      |-- localStorage/React state for remaining demo-only interactions
         |
         |-- Next.js API Routes: /api/auth/*
@@ -79,6 +79,10 @@ Browser UI (Next.js App Router)
         |      |-- Prisma client: src/lib/prisma.ts
         |      |-- PostgreSQL database
         |
+        |-- Next.js API Routes: /api/users/*
+        |      |-- suggested creator lookup
+        |      |-- follow/unfollow relationship persistence
+        |
         |-- Trend analysis: src/lib/trends.ts
 ```
 
@@ -93,7 +97,7 @@ User-created posts:
 SocialApp composer ─→ POST /api/posts ─→ Prisma ─→ PostgreSQL
 
 Remaining demo-only state:
-follows/chat/live/polls/share counters ─→ localStorage or React state
+chat/live/polls/share counters/notification UI ─→ localStorage or React state
 ```
 
 ---
@@ -113,7 +117,7 @@ follows/chat/live/polls/share counters ─→ localStorage or React state
 | Database | Prisma Postgres / PostgreSQL |
 | ORM | Prisma ORM |
 | State Management | React Hooks |
-| Persistence | PostgreSQL for users, sessions, posts, comments, likes, and saves; localStorage/React state for remaining demo features |
+| Persistence | PostgreSQL for users, sessions, posts, comments, likes, saves, and follows; localStorage/React state for remaining demo features |
 | Charts/Analytics | Custom keyword and subreddit analysis |
 
 ---
@@ -179,6 +183,7 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Comments on Reddit-sourced posts remain local UI state.
 - Likes and saves on database-backed posts are saved in PostgreSQL.
 - Likes and saves on Reddit-sourced posts remain local UI state.
+- Follow/unfollow relationships between Bloom & Brew users are saved in PostgreSQL.
 - Shares remain local UI state and are not yet stored in PostgreSQL.
 
 ---
@@ -233,7 +238,7 @@ Users can interact with posts and creators.
 - Send demo chat messages
 - Start/end a live-room demo
 
-These interactions are currently persisted locally in the browser. Database persistence has only been implemented for post creation so far.
+Likes, comments, saves/bookmarks, and follows are persisted in PostgreSQL for Bloom & Brew database-backed content and users. Reddit and YouTube posts remain external feed items, so interactions on those posts are kept in local UI state for the prototype. Chat, live-room status, notifications, polls, and share counters are also local/demo features.
 
 ---
 
@@ -366,7 +371,7 @@ The Community page demonstrates polls and community participation.
 | 4 | Push Notifications | Browser notification permission request and in-app notification panel |
 | 5 | Content Sharing | Composer, PostgreSQL-backed post publishing, share counter, image URL support |
 | 6 | In-App Chat / Calling | In-app chat demo; calling not implemented |
-| 7 | Follow / Friend Requests | Suggested creators with follow/unfollow |
+| 7 | Follow / Friend Requests | Suggested creators with PostgreSQL-backed follow/unfollow |
 | 8 | Media Editing | CSS-based image filters in composer |
 | 9 | Streaming | Live-room start/end demo |
 | 10 | Geolocation | Browser geolocation tagging |
@@ -383,7 +388,7 @@ The Community page demonstrates polls and community participation.
 | FR-04 | Users shall personalize profiles | Implemented with PostgreSQL persistence |
 | FR-05 | Users shall publish posts | Implemented with PostgreSQL persistence |
 | FR-06 | Users shall like, comment, save, and share posts | Likes, comments, and saves are database-backed for DB posts; shares are local |
-| FR-07 | Users shall follow creators | Implemented locally |
+| FR-07 | Users shall follow creators | Implemented with PostgreSQL-backed follow relationships |
 | FR-08 | Users shall view trending topics | Implemented |
 | FR-09 | Users shall participate in polls | Implemented locally |
 | FR-10 | Users shall use in-app chat | Implemented as local demo |
@@ -602,6 +607,46 @@ These routes manage Bloom & Brew user accounts and sessions. Passwords are hashe
 
 ---
 
+## 10.6 Internal User Follow API Routes
+
+### Endpoints
+
+```http
+GET /api/users/suggestions
+POST /api/users/[id]/follow
+```
+
+### Description
+These routes power the suggested follows card. The suggestions endpoint returns Bloom & Brew users from PostgreSQL and includes whether the authenticated viewer is already following each user. The follow endpoint toggles a PostgreSQL-backed `Follow` record between the authenticated user and the selected creator.
+
+### Suggested Users Response Shape
+
+```json
+{
+  "people": [
+    {
+      "id": "user_id",
+      "name": "Petal Notes",
+      "username": "petalnotes",
+      "avatar": "PN",
+      "bio": "Flower market notes and bouquet ideas.",
+      "isFollowing": false
+    }
+  ]
+}
+```
+
+### Follow Toggle Response Shape
+
+```json
+{
+  "isFollowing": true,
+  "username": "petalnotes"
+}
+```
+
+---
+
 # 11. User Interface Design
 
 # 11.1 Homepage / Feed
@@ -665,9 +710,22 @@ src/
         signup/
           route.ts
       posts/
+        [id]/
+          bookmarks/
+            route.ts
+          comments/
+            route.ts
+          likes/
+            route.ts
         route.ts
       reddit/
         route.ts
+      users/
+        [id]/
+          follow/
+            route.ts
+        suggestions/
+          route.ts
       youtube/
         route.ts
     community/
@@ -782,6 +840,9 @@ For a real deployed social network, strengthen the current custom auth with:
 - PostgreSQL-backed comments for database posts
 - PostgreSQL-backed likes for database posts
 - PostgreSQL-backed saves/bookmarks for database posts
+- PostgreSQL-backed follow/unfollow relationships
+- `GET /api/users/suggestions`
+- `POST /api/users/[id]/follow`
 - Embedded YouTube video posts in the homepage feed
 - `GET /api/posts` and `POST /api/posts`
 - `POST /api/posts/[id]/comments`
@@ -794,7 +855,6 @@ For a real deployed social network, strengthen the current custom auth with:
 - Local comments for Reddit-sourced posts
 - Local likes for Reddit-sourced posts
 - Local saves/bookmarks for Reddit-sourced posts
-- Local suggested follows
 - In-app notifications and browser notification permission request
 - Local chat demo
 - Live-room state demo
@@ -806,6 +866,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Like persistence: database post likes persist in PostgreSQL, but Reddit post likes remain local
 - Save persistence: database post bookmarks persist in PostgreSQL, but Reddit post saves remain local
 - YouTube persistence: YouTube video posts are fetched from the API and embedded in the feed, but they are external/read-only content like Reddit posts
+- Follow personalization: follow records persist in PostgreSQL, but the main feed is not yet filtered or ranked by followed users
 - User identity: real accounts exist, but there is no email verification, password reset, OAuth, or role-based authorization yet
 - Notifications: in-app only, with browser permission request but no push service worker
 - Media editing: CSS filters only
@@ -815,7 +876,10 @@ For a real deployed social network, strengthen the current custom auth with:
 - OAuth login
 - Email verification
 - Password reset
-- Database-backed follows/friend requests
+- Public user profile pages
+- Following-only feed view
+- Follower/following counts in the profile UI
+- Friend request accept/decline workflow
 - Database-backed notifications
 - Database-backed chat messages
 - Real-time chat/calling
@@ -830,7 +894,9 @@ For a real deployed social network, strengthen the current custom auth with:
 
 - Authentication is custom and intentionally simple for the prototype
 - User-created posts, comments, likes, and saves use authenticated user records
-- Comments, likes, and saves on Reddit posts, plus follows, polls, notifications, and chat are local-only
+- Follow relationships use authenticated user records and are persisted in PostgreSQL
+- Comments, likes, and saves on Reddit/YouTube posts, plus polls, notifications, share counters, and chat are local-only
+- Follow data is not yet used to personalize or filter the main feed
 - Chat is not real-time between users
 - Live room is a state demo, not video/audio streaming
 - No server-side user authorization is implemented
@@ -840,7 +906,9 @@ For a real deployed social network, strengthen the current custom auth with:
 # 17. Future Improvements
 
 - OAuth login with Auth.js, Supabase Auth, or another provider
-- Extend PostgreSQL persistence to follows, notifications, and messages
+- Add public profile pages and follower/following counts
+- Add a following-only or followed-first feed
+- Extend PostgreSQL persistence to notifications and messages
 - Real-time chat with WebSockets or Supabase Realtime
 - File upload for media instead of image URLs
 - Push notifications through service workers
