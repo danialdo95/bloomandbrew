@@ -89,7 +89,7 @@ function normalizePost(child: RedditListingChild): RedditPost | null {
 async function fetchSubreddit(subreddit: string) {
   const response = await fetch(`${REDDIT_BASE_URL}/r/${subreddit}/hot.json?limit=12`, {
     headers: {
-      "User-Agent": "BloomAndBrewSocial/1.0",
+      "User-Agent": "web:BloomAndBrewSocial:1.0 (by /u/danialdev95)"
     },
     next: {
       revalidate: 300,
