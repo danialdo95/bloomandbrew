@@ -487,22 +487,27 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     addNotification("Signed out of your account.");
   }
 
-  function updateProfile(nextProfile: SocialProfile) {
-    setProfile(nextProfile);
-
+  async function updateProfile(nextProfile: SocialProfile) {
     if (!currentUser) {
-      return;
+      throw new Error("Sign in to edit your profile.");
     }
 
-    setCurrentUser({ ...currentUser, profile: nextProfile });
-
-    void fetch("/api/auth/me", {
+    const response = await fetch("/api/auth/me", {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(nextProfile),
     });
+    const data = (await response.json()) as { user?: DemoUser; error?: string };
+
+    if (!response.ok || !data.user) {
+      throw new Error(data.error ?? "Profile could not be saved.");
+    }
+
+    setCurrentUser(data.user);
+    setProfile(data.user.profile);
+    addNotification("Profile saved.");
   }
 
   async function publishPost() {

@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { getInitials } from "@/lib/social";
 import type { DemoUser, SocialProfile } from "@/types/social";
 
@@ -5,7 +7,7 @@ type ProfilePanelProps = {
   profile: SocialProfile;
   isAuthenticated: boolean;
   currentUser: DemoUser | null;
-  onProfileChange: (profile: SocialProfile) => void;
+  onProfileChange: (profile: SocialProfile) => Promise<void>;
   onCreateAccount: () => void;
 };
 
@@ -16,6 +18,52 @@ export function ProfilePanel({
   onProfileChange,
   onCreateAccount,
 }: ProfilePanelProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(profile);
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  function updateDraft(nextProfile: SocialProfile) {
+    setDraft(nextProfile);
+    setMessage("");
+  }
+
+  async function saveProfile() {
+    setIsSaving(true);
+    setMessage("");
+
+    try {
+      await onProfileChange({
+        ...draft,
+        name: draft.name.trim() || profile.name,
+        username: draft.username.replace(/[^a-z0-9_]/gi, "").toLowerCase(),
+        bio: draft.bio.trim(),
+        location: draft.location.trim() || "Bloom & Brew Social",
+        avatar: getInitials(draft.name) || profile.avatar,
+      });
+      setIsEditing(false);
+      setDraft({
+        ...draft,
+        name: draft.name.trim() || profile.name,
+        username: draft.username.replace(/[^a-z0-9_]/gi, "").toLowerCase(),
+        bio: draft.bio.trim(),
+        location: draft.location.trim() || "Bloom & Brew Social",
+        avatar: getInitials(draft.name) || profile.avatar,
+      });
+      setMessage("Profile saved.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Profile could not be saved.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function cancelEdit() {
+    setDraft(profile);
+    setIsEditing(false);
+    setMessage("");
+  }
+
   return (
     <section className="rounded-[6px] border border-[#eadfd4] bg-white p-5 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
       <div className="flex items-center gap-3">
@@ -58,40 +106,105 @@ export function ProfilePanel({
           >
             Create account
           </button>
-        ) : null}
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(profile);
+              setIsEditing(true);
+              setMessage("");
+            }}
+            className="mt-3 rounded-full border border-[#211f1d] px-4 py-2 text-xs font-black text-[#211f1d] transition hover:bg-[#211f1d] hover:text-white"
+          >
+            Edit profile
+          </button>
+        )}
       </div>
 
-      <div className="mt-5 space-y-3">
-        <input
-          value={profile.name}
-          onChange={(event) =>
-            onProfileChange({
-              ...profile,
-              name: event.target.value,
-              avatar: getInitials(event.target.value) || profile.avatar,
-            })
-          }
-          className="h-10 w-full rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-3 text-sm font-bold"
-          aria-label="Display name"
-        />
-        <input
-          value={profile.username}
-          onChange={(event) =>
-            onProfileChange({
-              ...profile,
-              username: event.target.value.replace(/\s+/g, "").toLowerCase(),
-            })
-          }
-          className="h-10 w-full rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-3 text-sm font-bold"
-          aria-label="Username"
-        />
-        <textarea
-          value={profile.bio}
-          onChange={(event) => onProfileChange({ ...profile, bio: event.target.value })}
-          className="min-h-20 w-full rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-3 py-2 text-sm font-bold"
-          aria-label="Profile bio"
-        />
-      </div>
+      {isEditing ? (
+        <div className="mt-5 space-y-3">
+          <label className="block">
+            <span className="text-xs font-black uppercase tracking-[0.14em] text-[#8a7d73]">
+              Display name
+            </span>
+            <input
+              value={draft.name}
+              onChange={(event) =>
+                updateDraft({
+                  ...draft,
+                  name: event.target.value,
+                  avatar: getInitials(event.target.value) || draft.avatar,
+                })
+              }
+              className="mt-1 h-10 w-full rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-3 text-sm font-bold"
+              aria-label="Display name"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-black uppercase tracking-[0.14em] text-[#8a7d73]">
+              Username
+            </span>
+            <input
+              value={draft.username}
+              onChange={(event) =>
+                updateDraft({
+                  ...draft,
+                  username: event.target.value.replace(/\s+/g, "").toLowerCase(),
+                })
+              }
+              className="mt-1 h-10 w-full rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-3 text-sm font-bold"
+              aria-label="Username"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-black uppercase tracking-[0.14em] text-[#8a7d73]">
+              Bio
+            </span>
+            <textarea
+              value={draft.bio}
+              onChange={(event) => updateDraft({ ...draft, bio: event.target.value })}
+              className="mt-1 min-h-20 w-full rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-3 py-2 text-sm font-bold"
+              aria-label="Profile bio"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-black uppercase tracking-[0.14em] text-[#8a7d73]">
+              Location
+            </span>
+            <input
+              value={draft.location}
+              onChange={(event) => updateDraft({ ...draft, location: event.target.value })}
+              className="mt-1 h-10 w-full rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-3 text-sm font-bold"
+              aria-label="Location"
+            />
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                void saveProfile();
+              }}
+              disabled={isSaving}
+              className="rounded-full bg-[#211f1d] px-4 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSaving ? "Saving..." : "Save changes"}
+            </button>
+            <button
+              type="button"
+              onClick={cancelEdit}
+              disabled={isSaving}
+              className="rounded-full border border-[#211f1d] px-4 py-2 text-xs font-black text-[#211f1d] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {message ? (
+        <p className="mt-3 rounded-[6px] bg-[#fff8f2] px-3 py-2 text-xs font-bold text-[#6f6259]">
+          {message}
+        </p>
+      ) : null}
     </section>
   );
 }
