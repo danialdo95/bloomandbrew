@@ -109,7 +109,7 @@ export async function GET(request: Request) {
     part: "snippet",
     q: query,
     type: "video",
-    maxResults: "5",
+    maxResults: "20",
     safeSearch: "moderate",
     key: apiKey,
   });

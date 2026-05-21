@@ -30,7 +30,7 @@ export function SocialHero({
             <p className="mt-4 max-w-3xl text-lg leading-8 text-[#6f6259]">
               Create posts, personalize a profile, follow creators, react,
               comment, share, chat, go live, tag locations, and browse a
-              Reddit-powered news feed.
+              Reddit and Youtube powered news feed.
             </p>
           </div>
 
