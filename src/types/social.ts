@@ -53,6 +53,10 @@ export type DemoUser = {
   id: string;
   email: string;
   profile: SocialProfile;
+  stats?: {
+    followers: number;
+    following: number;
+  };
 };
 
 export type SuggestedPerson = {

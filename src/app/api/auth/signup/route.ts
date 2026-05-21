@@ -62,5 +62,13 @@ export async function POST(request: Request) {
 
   await createSession(user.id);
 
-  return NextResponse.json({ user: toAuthUser(user) }, { status: 201 });
+  return NextResponse.json({
+    user: {
+      ...toAuthUser(user),
+      stats: {
+        followers: 0,
+        following: 0,
+      },
+    },
+  }, { status: 201 });
 }

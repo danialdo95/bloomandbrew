@@ -59,7 +59,34 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const user = await getCurrentUser();
   const viewer = user?.id ?? searchParams.get("viewer") ?? undefined;
+  const feed = searchParams.get("feed");
+  const where = feed === "following" && user
+    ? {
+        authorId: {
+          in: [
+            user.id,
+            ...(await prisma.follow.findMany({
+              where: {
+                followerId: user.id,
+              },
+              select: {
+                followingId: true,
+              },
+            })).map((follow) => follow.followingId),
+          ],
+        },
+      }
+    : undefined;
+
+  if (feed === "following" && !user) {
+    return NextResponse.json(
+      { error: "Authentication required.", posts: [] },
+      { status: 401 },
+    );
+  }
+
   const posts = await prisma.post.findMany({
+    where,
     include: {
       author: true,
       comments: {

@@ -11,8 +11,31 @@ function normalizeUsername(value: string) {
 export async function GET() {
   const user = await getCurrentUser();
 
+  if (!user) {
+    return NextResponse.json({ user: null });
+  }
+
+  const [followers, following] = await Promise.all([
+    prisma.follow.count({
+      where: {
+        followingId: user.id,
+      },
+    }),
+    prisma.follow.count({
+      where: {
+        followerId: user.id,
+      },
+    }),
+  ]);
+
   return NextResponse.json({
-    user: user ? toAuthUser(user) : null,
+    user: {
+      ...toAuthUser(user),
+      stats: {
+        followers,
+        following,
+      },
+    },
   });
 }
 
@@ -50,7 +73,28 @@ export async function PATCH(request: Request) {
       },
     });
 
-    return NextResponse.json({ user: toAuthUser(updatedUser) });
+    const [followers, following] = await Promise.all([
+      prisma.follow.count({
+        where: {
+          followingId: updatedUser.id,
+        },
+      }),
+      prisma.follow.count({
+        where: {
+          followerId: updatedUser.id,
+        },
+      }),
+    ]);
+
+    return NextResponse.json({
+      user: {
+        ...toAuthUser(updatedUser),
+        stats: {
+          followers,
+          following,
+        },
+      },
+    });
   } catch {
     return NextResponse.json(
       { error: "Username is already taken." },

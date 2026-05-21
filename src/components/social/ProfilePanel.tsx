@@ -29,6 +29,20 @@ export function ProfilePanel({
       </div>
       <p className="mt-4 text-sm leading-6 text-[#6f6259]">{profile.bio}</p>
       <p className="mt-3 text-sm font-bold text-[#c45572]">📍 {profile.location}</p>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="rounded-[6px] bg-[#fff8f2] px-3 py-2">
+          <p className="text-lg font-black text-[#211f1d]">
+            {currentUser?.stats?.followers ?? 0}
+          </p>
+          <p className="text-xs font-bold text-[#8a7d73]">Followers</p>
+        </div>
+        <div className="rounded-[6px] bg-[#fff8f2] px-3 py-2">
+          <p className="text-lg font-black text-[#211f1d]">
+            {currentUser?.stats?.following ?? 0}
+          </p>
+          <p className="text-xs font-bold text-[#8a7d73]">Following</p>
+        </div>
+      </div>
       <div className="mt-4 rounded-[6px] bg-[#fff8f2] p-3">
         <p className="text-xs font-black uppercase tracking-[0.16em] text-[#c45572]">
           Account status

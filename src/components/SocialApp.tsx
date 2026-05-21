@@ -29,6 +29,8 @@ type SocialAppProps = {
   source: "reddit" | "fallback";
 };
 
+type FeedMode = "for-you" | "following";
+
 const initialNotifications: NotificationItem[] = [
   {
     id: "welcome",
@@ -78,6 +80,8 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
+  const [feedMode, setFeedMode] = useState<FeedMode>("for-you");
+  const [followRefreshKey, setFollowRefreshKey] = useState(0);
 
   const isAuthenticated = Boolean(currentUser);
 
@@ -109,9 +113,15 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         return;
       }
 
+      if (feedMode === "following" && !isAuthenticated) {
+        setPosts([]);
+        return;
+      }
+
       try {
         const params = new URLSearchParams({
           viewer: profile.username,
+          feed: feedMode === "following" ? "following" : "for-you",
         });
         const response = await fetch(`/api/posts?${params.toString()}`);
 
@@ -126,10 +136,19 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         }
 
         setPosts((current) => {
+          if (feedMode === "following") {
+            return data.posts;
+          }
+
           const existingIds = new Set(data.posts.map((post) => post.id));
+          const externalPosts = current.filter((post) => !isDatabasePost(post));
+          const fallbackExternalPosts = externalPosts.length
+            ? externalPosts
+            : seedSocialPosts(redditPosts);
+
           return [
             ...data.posts,
-            ...current.filter((post) => !existingIds.has(post.id)),
+            ...fallbackExternalPosts.filter((post) => !existingIds.has(post.id)),
           ];
         });
       } catch (error) {
@@ -142,7 +161,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     return () => {
       active = false;
     };
-  }, [profile.username, storageReady]);
+  }, [feedMode, followRefreshKey, isAuthenticated, profile.username, redditPosts, storageReady]);
 
   useEffect(() => {
     let active = true;
@@ -176,6 +195,10 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     let active = true;
 
     async function loadYouTubePosts() {
+      if (feedMode !== "for-you") {
+        return;
+      }
+
       try {
         const response = await fetch("/api/youtube");
         const data = (await response.json()) as { posts?: SocialPost[] };
@@ -208,7 +231,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [feedMode]);
 
   const trends = useMemo(() => {
     return getTrendingKeywords(
@@ -346,6 +369,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     });
     setCurrentUser(null);
     setProfile(defaultProfile);
+    setFeedMode("for-you");
     addNotification("Signed out of your account.");
   }
 
@@ -653,6 +677,24 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
           item.id === person.id ? { ...item, isFollowing: data.isFollowing } : item,
         ),
       );
+      setCurrentUser((user) => {
+        if (!user) {
+          return user;
+        }
+
+        const currentFollowing = user.stats?.following ?? 0;
+
+        return {
+          ...user,
+          stats: {
+            followers: user.stats?.followers ?? 0,
+            following: data.isFollowing
+              ? currentFollowing + 1
+              : Math.max(currentFollowing - 1, 0),
+          },
+        };
+      });
+      setFollowRefreshKey((current) => current + 1);
       addNotification(
         data.isFollowing
           ? `You are now following @${data.username ?? person.username}.`
@@ -761,6 +803,28 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         </aside>
 
         <section className="order-1 space-y-5 lg:order-none">
+          <div className="flex items-center justify-between gap-3 rounded-[6px] border border-[#eadfd4] bg-white p-2 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
+            <div className="grid flex-1 grid-cols-2 gap-2">
+              {([
+                ["for-you", "For You"],
+                ["following", "Following"],
+              ] as const).map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setFeedMode(mode)}
+                  className={`h-11 rounded-[6px] text-sm font-black transition ${
+                    feedMode === mode
+                      ? "bg-[#211f1d] text-white"
+                      : "bg-[#fff8f2] text-[#6f6259] hover:text-[#211f1d]"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <PostComposer
             profile={profile}
             content={content}
@@ -779,24 +843,37 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
             isPublishing={isPublishing}
           />
 
-          {posts.map((post) => (
-            <FeedPost
-              key={post.id}
-              post={post}
-              commentDraft={commentDrafts[post.id] ?? ""}
-              onLike={toggleLike}
-              onShare={sharePost}
-              onBookmark={(postId) => {
-                void toggleBookmark(postId);
-              }}
-              onCommentDraftChange={(postId, value) =>
-                setCommentDrafts((current) => ({ ...current, [postId]: value }))
-              }
-              onAddComment={(postId) => {
-                void addComment(postId);
-              }}
-            />
-          ))}
+          {posts.length ? (
+            posts.map((post) => (
+              <FeedPost
+                key={post.id}
+                post={post}
+                commentDraft={commentDrafts[post.id] ?? ""}
+                onLike={toggleLike}
+                onShare={sharePost}
+                onBookmark={(postId) => {
+                  void toggleBookmark(postId);
+                }}
+                onCommentDraftChange={(postId, value) =>
+                  setCommentDrafts((current) => ({ ...current, [postId]: value }))
+                }
+                onAddComment={(postId) => {
+                  void addComment(postId);
+                }}
+              />
+            ))
+          ) : (
+            <div className="rounded-[6px] border border-dashed border-[#d8c8bc] bg-white p-8 text-center shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
+              <h2 className="text-xl font-black text-[#211f1d]">
+                {feedMode === "following" ? "Build your following feed" : "No posts yet"}
+              </h2>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#6f6259]">
+                {feedMode === "following"
+                  ? "Follow suggested creators or publish your own post to make this feed bloom."
+                  : "Share the first cafe, bouquet, or latte moment."}
+              </p>
+            </div>
+          )}
         </section>
 
         <SocialSidebar

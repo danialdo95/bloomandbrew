@@ -24,5 +24,26 @@ export async function POST(request: Request) {
 
   await createSession(user.id);
 
-  return NextResponse.json({ user: toAuthUser(user) });
+  const [followers, following] = await Promise.all([
+    prisma.follow.count({
+      where: {
+        followingId: user.id,
+      },
+    }),
+    prisma.follow.count({
+      where: {
+        followerId: user.id,
+      },
+    }),
+  ]);
+
+  return NextResponse.json({
+    user: {
+      ...toAuthUser(user),
+      stats: {
+        followers,
+        following,
+      },
+    },
+  });
 }

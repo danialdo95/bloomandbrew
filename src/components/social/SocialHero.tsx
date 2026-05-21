@@ -20,7 +20,7 @@ export function SocialHero({
     <section className="border-b border-[#eadfd4] bg-white">
       <div className="mx-auto max-w-7xl px-4 py-6 md:px-5 md:py-8">
         <p className="text-sm font-black uppercase tracking-[0.2em] text-[#c45572]">
-          Social media mode
+          Join the social feed
         </p>
         <div className="mt-3 grid gap-5 lg:grid-cols-[1fr_360px] lg:items-end">
           <div>

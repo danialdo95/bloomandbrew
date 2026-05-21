@@ -184,6 +184,7 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Likes and saves on database-backed posts are saved in PostgreSQL.
 - Likes and saves on Reddit-sourced posts remain local UI state.
 - Follow/unfollow relationships between Bloom & Brew users are saved in PostgreSQL.
+- The Following feed can filter database-backed posts to the signed-in user's own posts and posts from followed creators.
 - Shares remain local UI state and are not yet stored in PostgreSQL.
 
 ---
@@ -841,6 +842,8 @@ For a real deployed social network, strengthen the current custom auth with:
 - PostgreSQL-backed likes for database posts
 - PostgreSQL-backed saves/bookmarks for database posts
 - PostgreSQL-backed follow/unfollow relationships
+- Following feed tab for followed creators and the current user's posts
+- Follower/following counts in the profile UI
 - `GET /api/users/suggestions`
 - `POST /api/users/[id]/follow`
 - Embedded YouTube video posts in the homepage feed
@@ -866,7 +869,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Like persistence: database post likes persist in PostgreSQL, but Reddit post likes remain local
 - Save persistence: database post bookmarks persist in PostgreSQL, but Reddit post saves remain local
 - YouTube persistence: YouTube video posts are fetched from the API and embedded in the feed, but they are external/read-only content like Reddit posts
-- Follow personalization: follow records persist in PostgreSQL, but the main feed is not yet filtered or ranked by followed users
+- Follow personalization: follow records persist in PostgreSQL and power a Following feed, but external Reddit/YouTube posts are not personalized by follows
 - User identity: real accounts exist, but there is no email verification, password reset, OAuth, or role-based authorization yet
 - Notifications: in-app only, with browser permission request but no push service worker
 - Media editing: CSS filters only
@@ -877,8 +880,6 @@ For a real deployed social network, strengthen the current custom auth with:
 - Email verification
 - Password reset
 - Public user profile pages
-- Following-only feed view
-- Follower/following counts in the profile UI
 - Friend request accept/decline workflow
 - Database-backed notifications
 - Database-backed chat messages
@@ -896,7 +897,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - User-created posts, comments, likes, and saves use authenticated user records
 - Follow relationships use authenticated user records and are persisted in PostgreSQL
 - Comments, likes, and saves on Reddit/YouTube posts, plus polls, notifications, share counters, and chat are local-only
-- Follow data is not yet used to personalize or filter the main feed
+- Follow data filters the database-backed Following feed, but does not yet personalize Reddit or YouTube content
 - Chat is not real-time between users
 - Live room is a state demo, not video/audio streaming
 - No server-side user authorization is implemented
@@ -906,8 +907,8 @@ For a real deployed social network, strengthen the current custom auth with:
 # 17. Future Improvements
 
 - OAuth login with Auth.js, Supabase Auth, or another provider
-- Add public profile pages and follower/following counts
-- Add a following-only or followed-first feed
+- Add public profile pages
+- Add followed-first ranking to the For You feed
 - Extend PostgreSQL persistence to notifications and messages
 - Real-time chat with WebSockets or Supabase Realtime
 - File upload for media instead of image URLs
