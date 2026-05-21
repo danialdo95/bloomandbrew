@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AuthModal } from "@/components/social/AuthModal";
 import { FeedPost } from "@/components/social/FeedPost";
@@ -56,12 +56,37 @@ function isDatabasePost(post: SocialPost) {
   return post.source === "bloom" || post.community === "Bloom & Brew";
 }
 
+function isExternalPost(post: SocialPost) {
+  return post.source === "reddit" || post.source === "youtube";
+}
+
 function sortPostsByAge(posts: SocialPost[]) {
   return [...posts].sort(
     (first, second) =>
       new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime(),
   );
 }
+
+function toExternalPostPayload(post: SocialPost) {
+  return {
+    id: post.id,
+    source: post.source,
+    externalUrl: post.externalUrl,
+    youtubeUrl: post.youtubeUrl,
+    content: post.content,
+    author: post.author,
+    community: post.community,
+    imageUrl: post.imageUrl,
+    createdAt: post.createdAt,
+  };
+}
+
+type ExternalPostStats = {
+  likes: number;
+  liked: boolean;
+  bookmarked: boolean;
+  comments: SocialPost["comments"];
+};
 
 export function SocialApp({ redditPosts, source }: SocialAppProps) {
   const [storageReady, setStorageReady] = useState(false);
@@ -91,8 +116,24 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   const [isPublishing, setIsPublishing] = useState(false);
   const [feedMode, setFeedMode] = useState<FeedMode>("for-you");
   const [followRefreshKey, setFollowRefreshKey] = useState(0);
+  const postsRef = useRef(posts);
 
   const isAuthenticated = Boolean(currentUser);
+  const externalPostKey = useMemo(
+    () =>
+      feedMode === "for-you"
+        ? posts
+            .filter(isExternalPost)
+            .map((post) => post.id)
+            .sort()
+            .join("|")
+        : "",
+    [feedMode, posts],
+  );
+
+  useEffect(() => {
+    postsRef.current = posts;
+  }, [posts]);
 
   useEffect(() => {
     async function loadSession() {
@@ -241,6 +282,67 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       active = false;
     };
   }, [feedMode]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function syncExternalPosts() {
+      if (!storageReady || feedMode !== "for-you" || !externalPostKey) {
+        return;
+      }
+
+      const externalPosts = postsRef.current.filter(isExternalPost);
+
+      try {
+        const response = await fetch("/api/external-posts/sync", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            posts: externalPosts.map(toExternalPostPayload),
+          }),
+        });
+        const data = (await response.json()) as {
+          posts?: Record<string, ExternalPostStats>;
+        };
+
+        if (!active || !response.ok || !data.posts) {
+          return;
+        }
+
+        setPosts((current) =>
+          current.map((post) => {
+            const stats = data.posts?.[post.id];
+
+            if (!stats || !isExternalPost(post)) {
+              return post;
+            }
+
+            return {
+              ...post,
+              likes: post.likes - (post.persistedLikeCount ?? 0) + stats.likes,
+              persistedLikeCount: stats.likes,
+              liked: stats.liked,
+              bookmarked: stats.bookmarked,
+              comments: [
+                ...post.comments.filter((comment) => comment.system),
+                ...stats.comments,
+              ],
+            };
+          }),
+        );
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    syncExternalPosts();
+
+    return () => {
+      active = false;
+    };
+  }, [currentUser?.id, externalPostKey, feedMode, storageReady]);
 
   const trends = useMemo(() => {
     return getTrendingKeywords(
@@ -499,6 +601,47 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       }
     }
 
+    if (targetPost && isExternalPost(targetPost)) {
+      try {
+        const response = await fetch(`/api/external-posts/${postId}/likes`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            post: toExternalPostPayload(targetPost),
+          }),
+        });
+        const data = (await response.json()) as Partial<ExternalPostStats> & {
+          error?: string;
+        };
+
+        if (!response.ok || typeof data.liked !== "boolean" || typeof data.likes !== "number") {
+          throw new Error(data.error ?? "Like could not be recorded.");
+        }
+
+        setPosts((current) =>
+          current.map((post) =>
+            post.id === postId
+              ? {
+                  ...post,
+                  likes: post.likes - (post.persistedLikeCount ?? 0) + (data.likes as number),
+                  persistedLikeCount: data.likes as number,
+                  liked: data.liked as boolean,
+                }
+              : post,
+          ),
+        );
+        addNotification(data.liked ? "Post liked." : "Post unliked.");
+        return;
+      } catch (error) {
+        addNotification(
+          error instanceof Error ? error.message : "Like could not be recorded.",
+        );
+        return;
+      }
+    }
+
     setPosts((current) =>
       current.map((post) =>
         post.id === postId
@@ -558,6 +701,40 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       }
     }
 
+    if (targetPost && isExternalPost(targetPost)) {
+      try {
+        const response = await fetch(`/api/external-posts/${postId}/bookmarks`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            post: toExternalPostPayload(targetPost),
+          }),
+        });
+        const data = (await response.json()) as Partial<ExternalPostStats> & {
+          error?: string;
+        };
+
+        if (!response.ok || typeof data.bookmarked !== "boolean") {
+          throw new Error(data.error ?? "Save could not be recorded.");
+        }
+
+        setPosts((current) =>
+          current.map((post) =>
+            post.id === postId ? { ...post, bookmarked: data.bookmarked as boolean } : post,
+          ),
+        );
+        addNotification(data.bookmarked ? "Post saved." : "Post removed from saved.");
+        return;
+      } catch (error) {
+        addNotification(
+          error instanceof Error ? error.message : "Save could not be recorded.",
+        );
+        return;
+      }
+    }
+
     setPosts((current) =>
       current.map((post) =>
         post.id === postId ? { ...post, bookmarked: !post.bookmarked } : post,
@@ -602,6 +779,50 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
           body: JSON.stringify({
             text,
             profile,
+          }),
+        });
+        const data = (await response.json()) as {
+          comment?: SocialPost["comments"][number];
+          error?: string;
+        };
+
+        if (!response.ok || !data.comment) {
+          throw new Error(data.error ?? "Comment could not be added.");
+        }
+
+        const savedComment = data.comment;
+
+        setPosts((current) =>
+          current.map((post) =>
+            post.id === postId
+              ? {
+                  ...post,
+                  comments: [...post.comments, savedComment],
+                }
+              : post,
+          ),
+        );
+        setCommentDrafts((current) => ({ ...current, [postId]: "" }));
+        addNotification("Your comment was saved to the database.");
+        return;
+      } catch (error) {
+        addNotification(
+          error instanceof Error ? error.message : "Comment could not be added.",
+        );
+        return;
+      }
+    }
+
+    if (targetPost && isExternalPost(targetPost)) {
+      try {
+        const response = await fetch(`/api/external-posts/${postId}/comments`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text,
+            post: toExternalPostPayload(targetPost),
           }),
         });
         const data = (await response.json()) as {

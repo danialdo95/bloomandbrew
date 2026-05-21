@@ -102,3 +102,56 @@ model SavedPost {
   @@unique([postId, userIdentifier])
   @@index([postId])
 }
+
+model ExternalPost {
+  id          String            @id
+  source      String
+  externalUrl String?
+  title       String
+  author      String
+  community   String
+  imageUrl    String?
+  createdAt   DateTime
+  comments    ExternalComment[]
+  likes       ExternalLike[]
+  savedBy     ExternalSavedPost[]
+  updatedAt   DateTime          @updatedAt
+
+  @@index([source])
+  @@index([createdAt])
+}
+
+model ExternalComment {
+  id             String       @id @default(cuid())
+  externalPostId String
+  authorName     String
+  authorUsername String
+  authorAvatar   String       @default("BB")
+  text           String
+  post           ExternalPost @relation(fields: [externalPostId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@index([externalPostId])
+}
+
+model ExternalLike {
+  id             String       @id @default(cuid())
+  externalPostId String
+  userIdentifier String
+  post           ExternalPost @relation(fields: [externalPostId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@unique([externalPostId, userIdentifier])
+  @@index([externalPostId])
+}
+
+model ExternalSavedPost {
+  id             String       @id @default(cuid())
+  externalPostId String
+  userIdentifier String
+  post           ExternalPost @relation(fields: [externalPostId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@unique([externalPostId, userIdentifier])
+  @@index([externalPostId])
+}

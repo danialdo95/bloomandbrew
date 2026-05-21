@@ -180,9 +180,9 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Reddit posts remain external feed content.
 - YouTube video posts remain external feed content.
 - Comments on database-backed posts are saved in PostgreSQL.
-- Comments on Reddit-sourced posts remain local UI state.
+- Comments on Reddit and YouTube posts are saved in PostgreSQL as external-post interactions.
 - Likes and saves on database-backed posts are saved in PostgreSQL.
-- Likes and saves on Reddit-sourced posts remain local UI state.
+- Likes and saves on Reddit and YouTube posts are saved in PostgreSQL as external-post interactions.
 - Follow/unfollow relationships between Bloom & Brew users are saved in PostgreSQL.
 - The Following feed can filter database-backed posts to the signed-in user's own posts and posts from followed creators.
 - Shares remain local UI state and are not yet stored in PostgreSQL.
@@ -841,6 +841,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - PostgreSQL-backed comments for database posts
 - PostgreSQL-backed likes for database posts
 - PostgreSQL-backed saves/bookmarks for database posts
+- PostgreSQL-backed comments, likes, and saves for Reddit/YouTube external posts
 - PostgreSQL-backed follow/unfollow relationships
 - Following feed tab for followed creators and the current user's posts
 - Follower/following counts in the profile UI
@@ -853,24 +854,22 @@ For a real deployed social network, strengthen the current custom auth with:
 - `POST /api/posts/[id]/comments`
 - `POST /api/posts/[id]/likes`
 - `POST /api/posts/[id]/bookmarks`
+- `POST /api/external-posts/sync`
+- `POST /api/external-posts/[id]/comments`
+- `POST /api/external-posts/[id]/likes`
+- `POST /api/external-posts/[id]/bookmarks`
 - Prisma schema, migrations, generated client, seed script, and verification script
 - Image URL posting and CSS filter selection
 - Location tagging in the composer
 - Local shares
-- Local comments for Reddit-sourced posts
-- Local likes for Reddit-sourced posts
-- Local saves/bookmarks for Reddit-sourced posts
 - In-app notifications and browser notification permission request
 - Local chat demo
 - Live-room state demo
 - Trends, Discover, and Community pages
 
 ## Partially Implemented
-- Feed persistence: user-created posts persist in PostgreSQL, but Reddit posts remain external and interactions remain local
-- Comment persistence: database post comments persist in PostgreSQL, but Reddit post comments remain local
-- Like persistence: database post likes persist in PostgreSQL, but Reddit post likes remain local
-- Save persistence: database post bookmarks persist in PostgreSQL, but Reddit post saves remain local
-- YouTube persistence: YouTube video posts are fetched from the API and embedded in the feed, but they are external/read-only content like Reddit posts
+- Feed persistence: user-created posts persist in PostgreSQL, while Reddit/YouTube content remains externally sourced and is mirrored only for interaction persistence
+- YouTube persistence: YouTube video posts are fetched from the API and embedded in the feed, while user interactions are saved locally in PostgreSQL
 - Follow personalization: follow records persist in PostgreSQL and power a Following feed, but external Reddit/YouTube posts are not personalized by follows
 - User identity: real accounts exist, but there is no email verification, password reset, OAuth, or role-based authorization yet
 - Notifications: in-app only, with browser permission request but no push service worker
@@ -897,7 +896,8 @@ For a real deployed social network, strengthen the current custom auth with:
 - Authentication is custom and intentionally simple for the prototype
 - User-created posts, comments, likes, and saves use authenticated user records
 - Follow relationships use authenticated user records and are persisted in PostgreSQL
-- Comments, likes, and saves on Reddit/YouTube posts, plus polls, notifications, share counters, and chat are local-only
+- Reddit/YouTube post content remains externally sourced, but comments, likes, and saves on those items are persisted in PostgreSQL
+- Polls, notifications, share counters, and chat are local-only
 - Follow data filters the database-backed Following feed, but does not yet personalize Reddit or YouTube content
 - Chat is not real-time between users
 - Live room is a state demo, not video/audio streaming

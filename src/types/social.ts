@@ -30,6 +30,7 @@ export type SocialPost = {
   location: string;
   createdAt: string;
   likes: number;
+  persistedLikeCount?: number;
   shares: number;
   externalCommentCount?: number;
   comments: SocialComment[];
