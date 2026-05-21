@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { filterClasses, filterStyles, getTimeLabel } from "@/lib/social";
 import type { SocialPost } from "@/types/social";
 
@@ -25,16 +27,34 @@ export function FeedPost({
     post.source === "reddit" || post.source === "youtube"
       ? (post.externalCommentCount ?? 0) + userCommentCount
       : post.comments.length;
+  const isBloomPost = post.source === "bloom";
+  const profileHref = `/users/${post.username}`;
 
   return (
     <article className="rounded-[6px] border border-[#eadfd4] bg-white shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
       <div className="flex items-start gap-3 p-5">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7c6cf] text-sm font-black">
-          {post.avatar}
-        </div>
+        {isBloomPost ? (
+          <Link
+            href={profileHref}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7c6cf] text-sm font-black"
+            aria-label={`View ${post.author}'s profile`}
+          >
+            {post.avatar}
+          </Link>
+        ) : (
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7c6cf] text-sm font-black">
+            {post.avatar}
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-black text-[#211f1d]">{post.author}</h3>
+            {isBloomPost ? (
+              <Link href={profileHref} className="font-black text-[#211f1d] hover:underline">
+                {post.author}
+              </Link>
+            ) : (
+              <h3 className="font-black text-[#211f1d]">{post.author}</h3>
+            )}
             <span className="text-sm font-bold text-[#8a7d73]">@{post.username}</span>
             <span className="text-sm font-bold text-[#8a7d73]">
               · {getTimeLabel(post.createdAt)}

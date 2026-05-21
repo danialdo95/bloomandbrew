@@ -844,6 +844,8 @@ For a real deployed social network, strengthen the current custom auth with:
 - PostgreSQL-backed follow/unfollow relationships
 - Following feed tab for followed creators and the current user's posts
 - Follower/following counts in the profile UI
+- Public user profile pages at `/users/[username]`
+- Feed and suggested-follow links to public profiles
 - `GET /api/users/suggestions`
 - `POST /api/users/[id]/follow`
 - Embedded YouTube video posts in the homepage feed
@@ -879,7 +881,6 @@ For a real deployed social network, strengthen the current custom auth with:
 - OAuth login
 - Email verification
 - Password reset
-- Public user profile pages
 - Friend request accept/decline workflow
 - Database-backed notifications
 - Database-backed chat messages
