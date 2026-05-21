@@ -159,6 +159,36 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   useEffect(() => {
     let active = true;
 
+    async function loadNotifications() {
+      if (!isAuthenticated) {
+        setNotifications(initialNotifications);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/notifications");
+        const data = (await response.json()) as {
+          notifications?: NotificationItem[];
+        };
+
+        if (active && response.ok) {
+          setNotifications(data.notifications?.length ? data.notifications : initialNotifications);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    loadNotifications();
+
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    let active = true;
+
     async function loadDatabasePosts() {
       if (!storageReady) {
         return;
@@ -366,14 +396,48 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   }, [posts]);
 
   function addNotification(text: string) {
+    const optimisticNotification = {
+      id: crypto.randomUUID(),
+      text,
+      createdAt: "Now",
+    };
+
     setNotifications((current) => [
-      {
-        id: crypto.randomUUID(),
-        text,
-        createdAt: "Now",
-      },
-      ...current.slice(0, 5),
+      optimisticNotification,
+      ...current.slice(0, 19),
     ]);
+
+    if (!isAuthenticated) {
+      return;
+    }
+
+    void fetch("/api/notifications", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text }),
+    })
+      .then(async (response) => {
+        const data = (await response.json()) as {
+          notification?: NotificationItem;
+        };
+
+        if (!response.ok || !data.notification) {
+          return;
+        }
+
+        setNotifications((current) =>
+          current.map((notification) =>
+            notification.id === optimisticNotification.id
+              ? data.notification as NotificationItem
+              : notification,
+          ),
+        );
+      })
+      .catch((error) => {
+        console.error(error);
+      });
   }
 
   useEffect(() => {
@@ -993,26 +1057,6 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     }
   }
 
-  function requestBrowserNotification() {
-    if (!requireAuth("enable notifications")) {
-      return;
-    }
-
-    if (!("Notification" in window)) {
-      addNotification("Browser notifications are not supported here.");
-      return;
-    }
-
-    Notification.requestPermission().then((permission) => {
-      if (permission === "granted") {
-        new Notification("Bloom & Brew Social", {
-          body: "Notifications are enabled for this demo.",
-        });
-      }
-      addNotification(`Notification permission: ${permission}.`);
-    });
-  }
-
   function useCurrentLocation() {
     if (!requireAuth("tag your location")) {
       return;
@@ -1122,7 +1166,6 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
             onFilterChange={setFilter}
             onLocationChange={setLocation}
             onUseCurrentLocation={useCurrentLocation}
-            onRequestNotification={requestBrowserNotification}
             onPublish={() => {
               void publishPost();
             }}

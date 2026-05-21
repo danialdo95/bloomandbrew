@@ -14,10 +14,31 @@ const navItems = [
 
 type NotificationEvent = CustomEvent<NotificationItem[]>;
 
+function formatNotificationTime(value: string) {
+  if (value === "Now") {
+    return value;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [browserNotificationStatus, setBrowserNotificationStatus] =
+    useState("Browser alerts");
 
   useEffect(() => {
     function handleNotifications(event: Event) {
@@ -30,6 +51,36 @@ export function Navbar() {
       window.removeEventListener("bloom-notifications", handleNotifications);
     };
   }, []);
+
+  function announceNotificationStatus(text: string) {
+    window.dispatchEvent(
+      new CustomEvent("bloom-browser-notification-status", {
+        detail: text,
+      }),
+    );
+  }
+
+  function requestBrowserNotifications() {
+    if (!("Notification" in window)) {
+      setBrowserNotificationStatus("Not supported");
+      announceNotificationStatus("Browser notifications are not supported here.");
+      return;
+    }
+
+    Notification.requestPermission().then((permission) => {
+      setBrowserNotificationStatus(
+        permission === "granted" ? "Alerts enabled" : `Alerts ${permission}`,
+      );
+
+      if (permission === "granted") {
+        new Notification("Bloom & Brew Social", {
+          body: "Browser alerts are enabled for this demo.",
+        });
+      }
+
+      announceNotificationStatus(`Notification permission: ${permission}.`);
+    });
+  }
 
   return (
     <header className="sticky top-0 z-30 border-b border-[#ece2d8] bg-white/95 backdrop-blur">
@@ -89,6 +140,13 @@ export function Navbar() {
                   </span>
                 </div>
                 <div className="mt-3 max-h-72 space-y-2 overflow-y-auto">
+                  <button
+                    type="button"
+                    onClick={requestBrowserNotifications}
+                    className="w-full rounded-[6px] border border-[#eadfd4] bg-white px-3 py-2 text-left text-xs font-black text-[#211f1d] transition hover:bg-[#fff8f2]"
+                  >
+                    🔔 {browserNotificationStatus}
+                  </button>
                   {notifications.length ? (
                     notifications.map((item) => (
                       <div key={item.id} className="rounded-[6px] bg-[#fff8f2] p-3">
@@ -96,7 +154,7 @@ export function Navbar() {
                           {item.text}
                         </p>
                         <p className="mt-1 text-xs font-bold text-[#8a7d73]">
-                          {item.createdAt}
+                          {formatNotificationTime(item.createdAt)}
                         </p>
                       </div>
                     ))

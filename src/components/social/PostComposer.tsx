@@ -12,7 +12,6 @@ type PostComposerProps = {
   onFilterChange: (value: string) => void;
   onLocationChange: (value: string) => void;
   onUseCurrentLocation: () => void;
-  onRequestNotification: () => void;
   onPublish: () => void;
   isPublishing?: boolean;
 };
@@ -28,7 +27,6 @@ export function PostComposer({
   onFilterChange,
   onLocationChange,
   onUseCurrentLocation,
-  onRequestNotification,
   onPublish,
   isPublishing = false,
 }: PostComposerProps) {
@@ -114,13 +112,6 @@ export function PostComposer({
                 className="rounded-full bg-[#fff8f2] px-3 py-2 text-xs font-black text-[#211f1d]"
               >
                 📍 Use my location
-              </button>
-              <button
-                type="button"
-                onClick={onRequestNotification}
-                className="rounded-full bg-[#fff8f2] px-3 py-2 text-xs font-black text-[#211f1d]"
-              >
-                Enable notifications
               </button>
             </div>
             <button
