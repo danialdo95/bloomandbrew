@@ -56,11 +56,20 @@ function isDatabasePost(post: SocialPost) {
   return post.source === "bloom" || post.community === "Bloom & Brew";
 }
 
+function sortPostsByAge(posts: SocialPost[]) {
+  return [...posts].sort(
+    (first, second) =>
+      new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime(),
+  );
+}
+
 export function SocialApp({ redditPosts, source }: SocialAppProps) {
   const [storageReady, setStorageReady] = useState(false);
   const [currentUser, setCurrentUser] = useState<DemoUser | null>(null);
   const [profile, setProfile] = useState<SocialProfile>(defaultProfile);
-  const [posts, setPosts] = useState<SocialPost[]>(() => seedSocialPosts(redditPosts));
+  const [posts, setPosts] = useState<SocialPost[]>(() =>
+    sortPostsByAge(seedSocialPosts(redditPosts)),
+  );
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [filter, setFilter] = useState("Natural");
@@ -137,7 +146,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
 
         setPosts((current) => {
           if (feedMode === "following") {
-            return data.posts;
+            return sortPostsByAge(data.posts);
           }
 
           const existingIds = new Set(data.posts.map((post) => post.id));
@@ -146,10 +155,10 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
             ? externalPosts
             : seedSocialPosts(redditPosts);
 
-          return [
+          return sortPostsByAge([
             ...data.posts,
             ...fallbackExternalPosts.filter((post) => !existingIds.has(post.id)),
-          ];
+          ]);
         });
       } catch (error) {
         console.error(error);
@@ -219,7 +228,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
               !youtubeIds.has(post.id),
           );
 
-          return [...databasePosts, ...youtubePosts, ...otherPosts];
+          return sortPostsByAge([...databasePosts, ...youtubePosts, ...otherPosts]);
         });
       } catch (error) {
         console.error(error);
@@ -423,10 +432,10 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         throw new Error(data.error ?? "Post could not be shared.");
       }
 
-      setPosts((current) => [
+      setPosts((current) => sortPostsByAge([
         data.post as SocialPost,
         ...current.filter((post) => post.id !== data.post?.id),
-      ]);
+      ]));
       setContent("");
       setImageUrl("");
       setFilter("Natural");
