@@ -36,6 +36,7 @@ export type SocialPost = {
   comments: SocialComment[];
   liked: boolean;
   bookmarked: boolean;
+  persistedShareCount?: number;
 };
 
 export type NotificationItem = {

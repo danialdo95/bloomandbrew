@@ -14,7 +14,7 @@ Bloom & Brew Social is a web-based social media prototype focused on cafe cultur
 
 The latest implementation is no longer only a dashboard. It now behaves like a social media application where users can create an account, personalize a profile, publish posts, interact with posts, follow suggested creators, receive in-app notifications, chat, start a live-room demo, add image filters, and tag locations.
 
-The first database migration steps have also been completed. User accounts, sessions, user-created posts, comments, likes, saves/bookmarks, and follow relationships are now stored in PostgreSQL through Prisma ORM, while secondary interactions such as chat, notifications, polls, and share counters remain browser-local.
+The first database migration steps have also been completed. User accounts, sessions, user-created posts, comments, likes, saves/bookmarks, shares, and follow relationships are now stored in PostgreSQL through Prisma ORM, while secondary interactions such as chat, notifications, and polls remain browser-local.
 
 The application demonstrates:
 - Managed communities
@@ -97,7 +97,7 @@ User-created posts:
 SocialApp composer ─→ POST /api/posts ─→ Prisma ─→ PostgreSQL
 
 Remaining demo-only state:
-chat/live/polls/share counters/notification UI ─→ localStorage or React state
+chat/live/polls/notification UI ─→ localStorage or React state
 ```
 
 ---
@@ -185,7 +185,7 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Likes and saves on Reddit and YouTube posts are saved in PostgreSQL as external-post interactions.
 - Follow/unfollow relationships between Bloom & Brew users are saved in PostgreSQL.
 - The Following feed can filter database-backed posts to the signed-in user's own posts and posts from followed creators.
-- Shares remain local UI state and are not yet stored in PostgreSQL.
+- Shares are saved in PostgreSQL for both Bloom posts and Reddit/YouTube external posts.
 
 ---
 
@@ -239,7 +239,7 @@ Users can interact with posts and creators.
 - Send demo chat messages
 - Start/end a live-room demo
 
-Likes, comments, saves/bookmarks, and follows are persisted in PostgreSQL for Bloom & Brew database-backed content and users. Reddit and YouTube posts remain external feed items, so interactions on those posts are kept in local UI state for the prototype. Chat, live-room status, notifications, polls, and share counters are also local/demo features.
+Likes, comments, saves/bookmarks, shares, and follows are persisted in PostgreSQL for Bloom & Brew database-backed content and users. Reddit and YouTube posts remain external feed items, but their likes, comments, saves, and shares are persisted as external-post interactions. Chat, live-room status, notifications, and polls are still local/demo features.
 
 ---
 
@@ -388,7 +388,7 @@ The Community page demonstrates polls and community participation.
 | FR-03 | Users shall sign up and sign in | Implemented with PostgreSQL users, hashed passwords, and session cookies |
 | FR-04 | Users shall personalize profiles | Implemented with PostgreSQL persistence |
 | FR-05 | Users shall publish posts | Implemented with PostgreSQL persistence |
-| FR-06 | Users shall like, comment, save, and share posts | Likes, comments, and saves are database-backed for DB posts; shares are local |
+| FR-06 | Users shall like, comment, save, and share posts | Implemented with PostgreSQL persistence for Bloom posts and external Reddit/YouTube posts |
 | FR-07 | Users shall follow creators | Implemented with PostgreSQL-backed follow relationships |
 | FR-08 | Users shall view trending topics | Implemented |
 | FR-09 | Users shall participate in polls | Implemented locally |
@@ -861,7 +861,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Prisma schema, migrations, generated client, seed script, and verification script
 - Image URL posting and CSS filter selection
 - Location tagging in the composer
-- Local shares
+- PostgreSQL-backed share counters for Bloom and external posts
 - In-app notifications and browser notification permission request
 - Local chat demo
 - Live-room state demo
@@ -897,7 +897,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - User-created posts, comments, likes, and saves use authenticated user records
 - Follow relationships use authenticated user records and are persisted in PostgreSQL
 - Reddit/YouTube post content remains externally sourced, but comments, likes, and saves on those items are persisted in PostgreSQL
-- Polls, notifications, share counters, and chat are local-only
+- Polls, notifications, and chat are local-only
 - Follow data filters the database-backed Following feed, but does not yet personalize Reddit or YouTube content
 - Chat is not real-time between users
 - Live room is a state demo, not video/audio streaming

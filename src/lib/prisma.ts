@@ -9,7 +9,15 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
+function hasCurrentDelegates(client: PrismaClient) {
+  const delegates = client as unknown as Record<string, unknown>;
+
+  return Boolean(delegates.postShare && delegates.externalShare);
+}
+
+const prisma = globalForPrisma.prisma && hasCurrentDelegates(globalForPrisma.prisma)
+  ? globalForPrisma.prisma
+  : new PrismaClient({ adapter });
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;

@@ -83,6 +83,7 @@ function toExternalPostPayload(post: SocialPost) {
 
 type ExternalPostStats = {
   likes: number;
+  shares: number;
   liked: boolean;
   bookmarked: boolean;
   comments: SocialPost["comments"];
@@ -323,6 +324,8 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
               ...post,
               likes: post.likes - (post.persistedLikeCount ?? 0) + stats.likes,
               persistedLikeCount: stats.likes,
+              shares: post.shares - (post.persistedShareCount ?? 0) + stats.shares,
+              persistedShareCount: stats.shares,
               liked: stats.liked,
               bookmarked: stats.bookmarked,
               comments: [
@@ -742,17 +745,65 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     );
   }
 
-  function sharePost(postId: string) {
+  async function sharePost(postId: string) {
     if (!requireAuth("share posts")) {
       return;
     }
 
-    setPosts((current) =>
-      current.map((post) =>
-        post.id === postId ? { ...post, shares: post.shares + 1 } : post,
-      ),
-    );
-    addNotification("Post shared with your community.");
+    const targetPost = posts.find((post) => post.id === postId);
+
+    if (!targetPost) {
+      return;
+    }
+
+    const endpoint = isExternalPost(targetPost)
+      ? `/api/external-posts/${postId}/shares`
+      : `/api/posts/${postId}/shares`;
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(
+          isExternalPost(targetPost)
+            ? {
+                post: toExternalPostPayload(targetPost),
+              }
+            : {},
+        ),
+      });
+      const data = (await response.json()) as {
+        shares?: number;
+        error?: string;
+      };
+
+      if (!response.ok || typeof data.shares !== "number") {
+        throw new Error(data.error ?? "Share could not be recorded.");
+      }
+
+      setPosts((current) =>
+        current.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                shares: isExternalPost(post)
+                  ? post.shares - (post.persistedShareCount ?? 0) + (data.shares as number)
+                  : data.shares as number,
+                persistedShareCount: isExternalPost(post)
+                  ? data.shares as number
+                  : post.persistedShareCount,
+              }
+            : post,
+        ),
+      );
+      addNotification("Post shared with your community.");
+    } catch (error) {
+      addNotification(
+        error instanceof Error ? error.message : "Share could not be recorded.",
+      );
+    }
   }
 
   async function addComment(postId: string) {

@@ -23,6 +23,9 @@ function toSocialPost(post: {
   savedBy: {
     userIdentifier: string;
   }[];
+  shares: {
+    userIdentifier: string;
+  }[];
   author: {
     name: string;
     username: string;
@@ -42,7 +45,7 @@ function toSocialPost(post: {
     location: post.location ?? "Bloom & Brew Social",
     createdAt: post.createdAt.toISOString(),
     likes: post.likes.length,
-    shares: 0,
+    shares: post.shares.length,
     comments: post.comments.map((comment) => ({
       id: comment.id,
       author: comment.authorName,
@@ -96,6 +99,7 @@ export async function GET(request: Request) {
       },
       likes: true,
       savedBy: true,
+      shares: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -151,6 +155,7 @@ export async function POST(request: Request) {
       comments: true,
       likes: true,
       savedBy: true,
+      shares: true,
     },
   });
 
