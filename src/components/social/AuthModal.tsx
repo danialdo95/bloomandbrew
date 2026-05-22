@@ -1,9 +1,12 @@
+import { LoadingSpinner } from "@/components/social/LoadingSpinner";
+
 type AuthModalProps = {
   authMode: "signin" | "signup";
   authName: string;
   authEmail: string;
   authPassword: string;
   authError: string;
+  isSubmitting: boolean;
   onClose: () => void;
   onModeChange: (mode: "signin" | "signup") => void;
   onNameChange: (value: string) => void;
@@ -18,6 +21,7 @@ export function AuthModal({
   authEmail,
   authPassword,
   authError,
+  isSubmitting,
   onClose,
   onModeChange,
   onNameChange,
@@ -45,6 +49,7 @@ export function AuthModal({
           <button
             type="button"
             onClick={onClose}
+            disabled={isSubmitting}
             className="rounded-full px-3 py-1 text-2xl font-black text-[#6f6259] hover:bg-[#fff8f2]"
             aria-label="Close auth modal"
           >
@@ -58,6 +63,7 @@ export function AuthModal({
               key={mode}
               type="button"
               onClick={() => onModeChange(mode)}
+              disabled={isSubmitting}
               className={`rounded-full px-4 py-2 text-sm font-black ${
                 authMode === mode ? "bg-[#211f1d] text-white" : "text-[#211f1d]"
               }`}
@@ -80,6 +86,7 @@ export function AuthModal({
               <input
                 value={authName}
                 onChange={(event) => onNameChange(event.target.value)}
+                disabled={isSubmitting}
                 className="mt-2 h-11 w-full rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-3 text-sm font-bold"
                 placeholder="Bloom Barista"
               />
@@ -92,6 +99,7 @@ export function AuthModal({
               type="email"
               value={authEmail}
               onChange={(event) => onEmailChange(event.target.value)}
+              disabled={isSubmitting}
               className="mt-2 h-11 w-full rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-3 text-sm font-bold"
               placeholder="you@example.com"
             />
@@ -103,6 +111,7 @@ export function AuthModal({
               type="password"
               value={authPassword}
               onChange={(event) => onPasswordChange(event.target.value)}
+              disabled={isSubmitting}
               className="mt-2 h-11 w-full rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-3 text-sm font-bold"
               placeholder="Password"
             />
@@ -116,9 +125,17 @@ export function AuthModal({
 
           <button
             type="submit"
-            className="h-12 w-full rounded-full bg-[#211f1d] text-sm font-black text-white transition hover:bg-[#c45572]"
+            disabled={isSubmitting}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#211f1d] text-sm font-black text-white transition hover:bg-[#c45572] disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {authMode === "signin" ? "Sign in" : "Create account"}
+            {isSubmitting ? <LoadingSpinner /> : null}
+            {isSubmitting
+              ? authMode === "signin"
+                ? "Signing in..."
+                : "Creating account..."
+              : authMode === "signin"
+                ? "Sign in"
+                : "Create account"}
           </button>
 
           <p className="text-center text-xs font-bold leading-5 text-[#8a7d73]">

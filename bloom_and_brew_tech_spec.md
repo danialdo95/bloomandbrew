@@ -35,7 +35,7 @@ The application demonstrates:
 - Provide social media interactions around that content
 - Demonstrate the 10 social media platform fundamentals
 - Create a visually engaging BloomThis-inspired interface
-- Deploy the application online using Leapcell
+- Deploy the application online using Vercel
 
 ---
 
@@ -79,9 +79,19 @@ Browser UI (Next.js App Router)
         |      |-- Prisma client: src/lib/prisma.ts
         |      |-- PostgreSQL database
         |
+        |-- Next.js API Routes: /api/external-posts/*
+        |      |-- mirrors Reddit/YouTube identifiers
+        |      |-- persists comments, likes, saves, and shares
+        |
+        |-- Next.js API Route: /api/notifications
+        |      |-- database-backed in-app notification list
+        |
         |-- Next.js API Routes: /api/users/*
         |      |-- suggested creator lookup
         |      |-- follow/unfollow relationship persistence
+        |
+        |-- Next.js Route: /users/[username]
+        |      |-- public creator profile page
         |
         |-- Trend analysis: src/lib/trends.ts
 ```
@@ -95,6 +105,9 @@ PostgreSQL ─→ Prisma ─→ /api/posts ────────────�
 
 User-created posts:
 SocialApp composer ─→ POST /api/posts ─→ Prisma ─→ PostgreSQL
+
+External interactions:
+Reddit/YouTube post IDs ─→ /api/external-posts/* ─→ Prisma ─→ PostgreSQL
 
 Remaining demo-only state:
 chat/live/polls ─→ localStorage or React state
@@ -112,12 +125,12 @@ chat/live/polls ─→ localStorage or React state
 | Backend/API | Next.js API Routes |
 | Social Media API | Reddit public JSON API |
 | Video Platform API | YouTube Data API |
-| Hosting | Leapcell |
+| Hosting | Vercel |
 | Authentication | Custom database-backed authentication |
 | Database | Prisma Postgres / PostgreSQL |
 | ORM | Prisma ORM |
 | State Management | React Hooks |
-| Persistence | PostgreSQL for users, sessions, posts, comments, likes, saves, and follows; localStorage/React state for remaining demo features |
+| Persistence | PostgreSQL for users, sessions, posts, comments, likes, saves, shares, notifications, external-post interactions, and follows; localStorage/React state for remaining demo features |
 | Charts/Analytics | Custom keyword and subreddit analysis |
 
 ---
@@ -152,7 +165,7 @@ The application fetches and normalizes Reddit posts from cafe, coffee, flower, f
 | Created At | Reddit post timestamp |
 
 ## Reliability
-If Reddit requests fail or return no usable posts, the app uses curated fallback content from `src/lib/fallback-posts.ts`.
+If Reddit requests fail or return no usable posts, the app uses curated fallback content from `src/lib/fallback-posts.ts`. The current implementation uses Reddit's public JSON endpoint, not Reddit OAuth/API credentials.
 
 ---
 
@@ -165,6 +178,7 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Reddit-seeded posts
 - YouTube API video posts
 - Database-backed user-created posts
+- Unified age sorting across Bloom, Reddit, and YouTube sources
 - Text post composer
 - Image URL attachment
 - Media filter selection
@@ -186,6 +200,7 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Follow/unfollow relationships between Bloom & Brew users are saved in PostgreSQL.
 - The Following feed can filter database-backed posts to the signed-in user's own posts and posts from followed creators.
 - Shares are saved in PostgreSQL for both Bloom posts and Reddit/YouTube external posts.
+- Database-backed notifications are shown in the navbar bell dropdown.
 
 ---
 
@@ -221,7 +236,7 @@ Users can personalize their visible profile.
 - Avatar initials
 - Location
 
-When signed in, profile changes are saved to the authenticated PostgreSQL user record. Posts, comments, likes, and saves use the authenticated user rather than trusting browser-only profile data.
+The profile card uses an explicit edit mode with Save and Cancel controls. When signed in, profile changes are saved to the authenticated PostgreSQL user record. Posts, comments, likes, and saves use the authenticated user rather than trusting browser-only profile data.
 
 ---
 
@@ -248,8 +263,8 @@ Likes, comments, saves/bookmarks, shares, notifications, and follows are persist
 ## Description
 The app has two notification mechanisms:
 
-- Database-backed in-app notification panel
-- Browser notification permission request
+- Database-backed in-app notifications in the navbar bell dropdown
+- Browser notification permission request from the notification menu
 
 ## Events That Trigger In-App Notifications
 - Account created
@@ -260,6 +275,8 @@ The app has two notification mechanisms:
 - Follow status changed
 - Live room started/ended
 - Location updated
+
+Notifications are no longer configured from the post composer. The composer only handles post content, media, filter, and location inputs.
 
 ---
 
@@ -317,6 +334,7 @@ Users can request browser geolocation and tag a post with coordinates.
 ## Features
 - Uses `navigator.geolocation`
 - Updates composer location field
+- Uses a location marker indicator in the composer and profile UI
 - Adds an in-app notification after location update
 
 ---
@@ -368,8 +386,8 @@ The Community page demonstrates polls and community participation.
 |---|---|---|
 | 1 | User Sign Up | Sign up popup modal with PostgreSQL user account and session cookie |
 | 2 | Profile Personalization | Editable profile card with database-backed name, username, bio, avatar initials, location |
-| 3 | News Feed | Reddit-seeded feed plus PostgreSQL-backed user-created posts |
-| 4 | Push Notifications | Browser notification permission request and in-app notification panel |
+| 3 | News Feed | Age-sorted feed combining PostgreSQL-backed user posts, Reddit posts, and YouTube posts |
+| 4 | Push Notifications | Database-backed in-app notification bell plus browser notification permission request |
 | 5 | Content Sharing | Composer, PostgreSQL-backed post publishing, share counter, image URL support |
 | 6 | In-App Chat / Calling | In-app chat demo; calling not implemented |
 | 7 | Follow / Friend Requests | Suggested creators with PostgreSQL-backed follow/unfollow |
@@ -395,7 +413,7 @@ The Community page demonstrates polls and community participation.
 | FR-10 | Users shall use in-app chat | Implemented as local demo |
 | FR-11 | Users shall start/end a live-room demo | Implemented as local demo |
 | FR-12 | System shall support geolocation tagging | Implemented with browser API |
-| FR-13 | System shall be accessible online | Implemented through Leapcell deployment |
+| FR-13 | System shall be accessible online | Implemented through Vercel deployment |
 | FR-14 | System shall support responsive design | Implemented with Tailwind responsive layouts |
 
 ---
@@ -408,7 +426,7 @@ The Community page demonstrates polls and community participation.
 | Responsiveness | Mobile-friendly UI | Tailwind responsive grid layouts |
 | Reliability | Stable API behavior | Fallback posts if Reddit fails; Prisma verification script exists |
 | Usability | Easy-to-use interface | Modal auth, social feed, cards, clear actions |
-| Deployability | Online hosting | Leapcell service with `npm start` and port `3000` |
+| Deployability | Online hosting | Vercel deployment using the Next.js framework preset |
 | Maintainability | Clear file separation | Social components, lib utilities, Prisma config, types, and app routes are separated |
 
 ---
@@ -648,6 +666,37 @@ These routes power the suggested follows card. The suggestions endpoint returns 
 
 ---
 
+## 10.7 Internal External-Post Interaction API Routes
+
+### Endpoints
+
+```http
+POST /api/external-posts/sync
+POST /api/external-posts/[id]/comments
+POST /api/external-posts/[id]/likes
+POST /api/external-posts/[id]/bookmarks
+POST /api/external-posts/[id]/shares
+```
+
+### Description
+These routes persist user interactions for Reddit and YouTube feed items without copying the full third-party post into the Bloom & Brew post table. The app stores the external source, external post id, title, URL, author, and interaction records in PostgreSQL.
+
+---
+
+## 10.8 Internal Notification API Route
+
+### Endpoints
+
+```http
+GET /api/notifications
+POST /api/notifications
+```
+
+### Description
+These routes load and create database-backed in-app notifications for the authenticated user.
+
+---
+
 # 11. User Interface Design
 
 # 11.1 Homepage / Feed
@@ -718,6 +767,22 @@ src/
             route.ts
           likes/
             route.ts
+          shares/
+            route.ts
+        route.ts
+      external-posts/
+        [id]/
+          bookmarks/
+            route.ts
+          comments/
+            route.ts
+          likes/
+            route.ts
+          shares/
+            route.ts
+        sync/
+          route.ts
+      notifications/
         route.ts
       reddit/
         route.ts
@@ -737,6 +802,9 @@ src/
       route.ts
     trends/
       page.tsx
+    users/
+      [username]/
+        page.tsx
     globals.css
     layout.tsx
     page.tsx
@@ -755,11 +823,13 @@ src/
       FeedPost.tsx
       PostComposer.tsx
       ProfilePanel.tsx
+      PublicProfileFollowButton.tsx
       SocialHero.tsx
       SocialSidebar.tsx
       SuggestedFollows.tsx
   lib/
     auth.ts
+    external-posts.ts
     fallback-posts.ts
     prisma.ts
     reddit.ts
@@ -783,16 +853,16 @@ prisma.config.ts
 
 | Item | Platform / Value |
 |---|---|
-| Hosting | Leapcell |
-| Runtime | Node.js |
-| Build Command | `npm install && npm run build` |
-| Start Command | `npm start` |
-| Serving Port | `3000` |
-| Domain | Leapcell generated domain |
+| Hosting | Vercel |
+| Runtime | Vercel Next.js runtime |
+| Build Command | `npm run build` after Vercel installs dependencies |
+| Start Command | Managed by Vercel |
+| Serving Port | Managed by Vercel |
+| Domain | Vercel generated or custom domain |
 | Database | Prisma Postgres / PostgreSQL |
 | Required Environment Variables | `DATABASE_URL`, `YOUTUBE_API_KEY` |
 
-## Current Production Start Script
+## Current Build Scripts
 
 ```json
 {
@@ -800,6 +870,8 @@ prisma.config.ts
   "start": "next start"
 }
 ```
+
+Vercel uses the Next.js framework preset for production runtime. The `start` script remains useful for local Node-based serving, but Vercel does not require a manually configured serving port.
 
 ---
 
@@ -809,7 +881,7 @@ prisma.config.ts
 |---|---|
 | Reddit API failure | Fallback dataset |
 | API abuse | Reddit fetch cache/revalidation |
-| Sensitive keys | `DATABASE_URL` is stored in `.env` locally and must be configured as a deployment environment variable |
+| Sensitive keys | `DATABASE_URL` and `YOUTUBE_API_KEY` are stored in `.env` locally and must be configured as Vercel environment variables |
 | XSS | React escapes rendered text; user content is rendered as text |
 | Authentication | Database-backed custom auth with HTTP-only session cookie |
 | Password storage | Passwords are hashed before storage |
@@ -829,7 +901,7 @@ For a real deployed social network, strengthen the current custom auth with:
 # 15. Current Implementation Status
 
 ## Completed
-- Leapcell deployment with `npm start`
+- Vercel deployment with the Next.js framework preset
 - Reddit feed integration with fallback data
 - YouTube Data API feed integration with fallback message
 - Social feed UI
@@ -842,6 +914,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - PostgreSQL-backed likes for database posts
 - PostgreSQL-backed saves/bookmarks for database posts
 - PostgreSQL-backed comments, likes, and saves for Reddit/YouTube external posts
+- PostgreSQL-backed share counters for Bloom and external posts
 - PostgreSQL-backed follow/unfollow relationships
 - Following feed tab for followed creators and the current user's posts
 - Follower/following counts in the profile UI
@@ -854,18 +927,22 @@ For a real deployed social network, strengthen the current custom auth with:
 - `POST /api/posts/[id]/comments`
 - `POST /api/posts/[id]/likes`
 - `POST /api/posts/[id]/bookmarks`
+- `POST /api/posts/[id]/shares`
 - `POST /api/external-posts/sync`
 - `POST /api/external-posts/[id]/comments`
 - `POST /api/external-posts/[id]/likes`
 - `POST /api/external-posts/[id]/bookmarks`
+- `POST /api/external-posts/[id]/shares`
 - Prisma schema, migrations, generated client, seed script, and verification script
 - Image URL posting and CSS filter selection
 - Location tagging in the composer
-- PostgreSQL-backed share counters for Bloom and external posts
 - Database-backed in-app notifications
 - `GET /api/notifications`
 - `POST /api/notifications`
 - In-app notifications and browser notification permission request
+- Notification permission moved into the navbar notification menu
+- Explicit profile editor with Save and Cancel controls
+- Age-sorted combined feed across Bloom, Reddit, and YouTube posts
 - Local chat demo
 - Live-room state demo
 - Trends, Discover, and Community pages
@@ -878,6 +955,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Notifications: in-app notifications are database-backed, with browser permission request but no push service worker
 - Media editing: CSS filters only
 - Geolocation: coordinate tagging only, no map/location search
+- Reddit source: public JSON endpoint with fallback data; OAuth/API credentials are currently deferred
 
 ## Not Yet Implemented
 - OAuth login
@@ -898,7 +976,8 @@ For a real deployed social network, strengthen the current custom auth with:
 - Authentication is custom and intentionally simple for the prototype
 - User-created posts, comments, likes, and saves use authenticated user records
 - Follow relationships use authenticated user records and are persisted in PostgreSQL
-- Reddit/YouTube post content remains externally sourced, but comments, likes, and saves on those items are persisted in PostgreSQL
+- Reddit/YouTube post content remains externally sourced, but comments, likes, saves, and shares on those items are persisted in PostgreSQL
+- Reddit currently uses the public JSON endpoint and can fall back to curated data if production hosting cannot fetch Reddit reliably
 - Polls and chat are local-only
 - Follow data filters the database-backed Following feed, but does not yet personalize Reddit or YouTube content
 - Chat is not real-time between users
@@ -910,7 +989,7 @@ For a real deployed social network, strengthen the current custom auth with:
 # 17. Future Improvements
 
 - OAuth login with Auth.js, Supabase Auth, or another provider
-- Add public profile pages
+- Optional Reddit OAuth/API credentials if public Reddit JSON is blocked in production
 - Add followed-first ranking to the For You feed
 - Extend PostgreSQL persistence to messages
 - Real-time chat with WebSockets or Supabase Realtime

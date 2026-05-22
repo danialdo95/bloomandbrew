@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { LoadingSpinner } from "@/components/social/LoadingSpinner";
 import type { SocialPost } from "@/types/social";
 
 export function YouTubeSuggestion() {
@@ -19,7 +20,12 @@ export function YouTubeSuggestion() {
   }, []);
 
   if (videos.length === 0) {
-    return <p>Loading YouTube suggestions...</p>;
+    return (
+      <p className="mt-6 flex items-center gap-2 rounded-[6px] bg-white p-4 text-sm font-bold text-[#6f6259] shadow">
+        <LoadingSpinner className="text-[#c45572]" />
+        Loading YouTube suggestions...
+      </p>
+    );
   }
 
   return (

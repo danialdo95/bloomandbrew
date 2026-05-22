@@ -1,3 +1,4 @@
+import { LoadingSpinner } from "@/components/social/LoadingSpinner";
 import { filterClasses, filterStyles } from "@/lib/social";
 import type { SocialProfile } from "@/types/social";
 
@@ -14,6 +15,7 @@ type PostComposerProps = {
   onUseCurrentLocation: () => void;
   onPublish: () => void;
   isPublishing?: boolean;
+  isLocating?: boolean;
 };
 
 export function PostComposer({
@@ -29,6 +31,7 @@ export function PostComposer({
   onUseCurrentLocation,
   onPublish,
   isPublishing = false,
+  isLocating = false,
 }: PostComposerProps) {
   return (
     <div className="rounded-[6px] border border-[#eadfd4] bg-white p-5 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
@@ -41,12 +44,12 @@ export function PostComposer({
             <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-[#c45572]">
               Create a post
             </span>
-          <textarea
-            value={content}
-            onChange={(event) => onContentChange(event.target.value)}
-            placeholder="Share a cafe visit, bouquet idea, latte art moment..."
-            className="min-h-24 w-full resize-none rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-4 py-3 text-sm font-bold text-[#211f1d]"
-          />
+            <textarea
+              value={content}
+              onChange={(event) => onContentChange(event.target.value)}
+              placeholder="Share a cafe visit, bouquet idea, latte art moment..."
+              className="min-h-24 w-full resize-none rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-4 py-3 text-sm font-bold text-[#211f1d]"
+            />
           </label>
           <div className="mt-3 grid gap-3 md:grid-cols-3">
             <label className="block">
@@ -109,17 +112,24 @@ export function PostComposer({
               <button
                 type="button"
                 onClick={onUseCurrentLocation}
-                className="rounded-full bg-[#fff8f2] px-3 py-2 text-xs font-black text-[#211f1d]"
+                disabled={isLocating || isPublishing}
+                className="flex items-center gap-2 rounded-full bg-[#fff8f2] px-3 py-2 text-xs font-black text-[#211f1d] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                📍 Use my location
+                {isLocating ? (
+                  <LoadingSpinner className="h-3 w-3" />
+                ) : (
+                  <span aria-hidden="true">📍</span>
+                )}
+                {isLocating ? "Finding location..." : "Use my location"}
               </button>
             </div>
             <button
               type="button"
               onClick={onPublish}
               disabled={isPublishing}
-              className="rounded-full bg-[#211f1d] px-6 py-3 text-sm font-black text-white transition hover:bg-[#c45572]"
+              className="flex min-w-32 items-center justify-center gap-2 rounded-full bg-[#211f1d] px-6 py-3 text-sm font-black text-white transition hover:bg-[#c45572] disabled:cursor-not-allowed disabled:opacity-70"
             >
+              {isPublishing ? <LoadingSpinner /> : null}
               {isPublishing ? "Sharing..." : "Share post"}
             </button>
           </div>

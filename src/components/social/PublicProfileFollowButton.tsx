@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { LoadingSpinner } from "@/components/social/LoadingSpinner";
+
 type PublicProfileFollowButtonProps = {
   userId: string;
   username: string;
@@ -68,12 +70,13 @@ export function PublicProfileFollowButton({
         type="button"
         onClick={toggleFollow}
         disabled={!canFollow || isSelf || isPending}
-        className={`rounded-full px-5 py-3 text-sm font-black transition ${
+        className={`inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-black transition ${
           isFollowing
             ? "border border-[#211f1d] bg-white text-[#211f1d]"
             : "bg-[#211f1d] text-white"
         } disabled:cursor-not-allowed disabled:opacity-60`}
       >
+        {isPending ? <LoadingSpinner /> : null}
         {isPending ? "Updating..." : label}
       </button>
       {error ? (

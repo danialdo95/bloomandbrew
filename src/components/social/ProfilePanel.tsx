@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { LoadingSpinner } from "@/components/social/LoadingSpinner";
 import { getInitials } from "@/lib/social";
 import type { DemoUser, SocialProfile } from "@/types/social";
 
@@ -185,8 +186,9 @@ export function ProfilePanel({
                 void saveProfile();
               }}
               disabled={isSaving}
-              className="rounded-full bg-[#211f1d] px-4 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-full bg-[#211f1d] px-4 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
+              {isSaving ? <LoadingSpinner className="h-3 w-3" /> : null}
               {isSaving ? "Saving..." : "Save changes"}
             </button>
             <button

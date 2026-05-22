@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { LoadingSpinner } from "@/components/social/LoadingSpinner";
 import type { NotificationItem } from "@/types/social";
 
 const navItems = [
@@ -39,6 +40,7 @@ export function Navbar() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [browserNotificationStatus, setBrowserNotificationStatus] =
     useState("Browser alerts");
+  const [isRequestingNotifications, setIsRequestingNotifications] = useState(false);
 
   useEffect(() => {
     function handleNotifications(event: Event) {
@@ -61,11 +63,17 @@ export function Navbar() {
   }
 
   function requestBrowserNotifications() {
+    if (isRequestingNotifications) {
+      return;
+    }
+
     if (!("Notification" in window)) {
       setBrowserNotificationStatus("Not supported");
       announceNotificationStatus("Browser notifications are not supported here.");
       return;
     }
+
+    setIsRequestingNotifications(true);
 
     Notification.requestPermission().then((permission) => {
       setBrowserNotificationStatus(
@@ -79,6 +87,8 @@ export function Navbar() {
       }
 
       announceNotificationStatus(`Notification permission: ${permission}.`);
+    }).finally(() => {
+      setIsRequestingNotifications(false);
     });
   }
 
@@ -143,9 +153,15 @@ export function Navbar() {
                   <button
                     type="button"
                     onClick={requestBrowserNotifications}
-                    className="w-full rounded-[6px] border border-[#eadfd4] bg-white px-3 py-2 text-left text-xs font-black text-[#211f1d] transition hover:bg-[#fff8f2]"
+                    disabled={isRequestingNotifications}
+                    className="flex w-full items-center gap-2 rounded-[6px] border border-[#eadfd4] bg-white px-3 py-2 text-left text-xs font-black text-[#211f1d] transition hover:bg-[#fff8f2] disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    🔔 {browserNotificationStatus}
+                    {isRequestingNotifications ? (
+                      <LoadingSpinner className="h-3 w-3" />
+                    ) : (
+                      <span aria-hidden="true">🔔</span>
+                    )}
+                    {isRequestingNotifications ? "Requesting alerts..." : browserNotificationStatus}
                   </button>
                   {notifications.length ? (
                     notifications.map((item) => (

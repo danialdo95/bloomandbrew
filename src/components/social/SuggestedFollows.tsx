@@ -1,23 +1,34 @@
 import Link from "next/link";
 
+import { LoadingSpinner } from "@/components/social/LoadingSpinner";
 import type { SuggestedPerson } from "@/types/social";
 
 type SuggestedFollowsProps = {
   people: SuggestedPerson[];
+  isLoading?: boolean;
+  pendingUserId?: string | null;
   onToggleFollow: (person: SuggestedPerson) => void;
 };
 
 export function SuggestedFollows({
   people,
+  isLoading = false,
+  pendingUserId = null,
   onToggleFollow,
 }: SuggestedFollowsProps) {
   return (
     <section className="rounded-[6px] border border-[#eadfd4] bg-white p-5 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
       <h2 className="font-black text-[#211f1d]">Suggested follows</h2>
       <div className="mt-4 space-y-4">
-        {people.length ? (
+        {isLoading ? (
+          <div className="flex items-center gap-2 rounded-[6px] bg-[#fff8f2] p-3 text-sm font-bold text-[#6f6259]">
+            <LoadingSpinner className="text-[#c45572]" />
+            Loading people to follow...
+          </div>
+        ) : people.length ? (
           people.map((person) => {
             const isFollowing = Boolean(person.isFollowing);
+            const isPending = pendingUserId === person.id;
             return (
               <div key={person.username} className="flex items-start gap-3">
                 <Link
@@ -39,9 +50,11 @@ export function SuggestedFollows({
                   <button
                     type="button"
                     onClick={() => onToggleFollow(person)}
-                    className="mt-2 rounded-full border border-[#211f1d] px-3 py-1 text-xs font-black transition hover:bg-[#211f1d] hover:text-white"
+                    disabled={isPending}
+                    className="mt-2 inline-flex items-center gap-2 rounded-full border border-[#211f1d] px-3 py-1 text-xs font-black transition hover:bg-[#211f1d] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isFollowing ? "Following" : "Follow"}
+                    {isPending ? <LoadingSpinner className="h-3 w-3" /> : null}
+                    {isPending ? "Updating..." : isFollowing ? "Following" : "Follow"}
                   </button>
                 </div>
               </div>

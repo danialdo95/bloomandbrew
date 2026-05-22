@@ -1,11 +1,15 @@
 import Link from "next/link";
 
+import { LoadingSpinner } from "@/components/social/LoadingSpinner";
 import { filterClasses, filterStyles, getTimeLabel } from "@/lib/social";
 import type { SocialPost } from "@/types/social";
+
+export type FeedPostPendingAction = "like" | "share" | "bookmark" | "comment" | null;
 
 type FeedPostProps = {
   post: SocialPost;
   commentDraft: string;
+  pendingAction?: FeedPostPendingAction;
   onLike: (postId: string) => void;
   onShare: (postId: string) => void;
   onBookmark: (postId: string) => void;
@@ -16,6 +20,7 @@ type FeedPostProps = {
 export function FeedPost({
   post,
   commentDraft,
+  pendingAction = null,
   onLike,
   onShare,
   onBookmark,
@@ -29,6 +34,7 @@ export function FeedPost({
       : post.comments.length;
   const isBloomPost = post.source === "bloom";
   const profileHref = `/users/${post.username}`;
+  const isBusy = Boolean(pendingAction);
 
   return (
     <article className="rounded-[6px] border border-[#eadfd4] bg-white shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
@@ -121,23 +127,35 @@ export function FeedPost({
         <button
           type="button"
           onClick={() => onLike(post.id)}
-          className="px-3 py-3 transition hover:bg-[#fff8f2]"
+          disabled={isBusy}
+          className="flex items-center justify-center gap-2 px-3 py-3 transition hover:bg-[#fff8f2] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {post.liked ? "Liked" : "Like"} · {post.likes.toLocaleString()}
+          {pendingAction === "like" ? <LoadingSpinner className="h-3 w-3" /> : null}
+          {pendingAction === "like"
+            ? "Updating..."
+            : `${post.liked ? "Liked" : "Like"} · ${post.likes.toLocaleString()}`}
         </button>
         <button
           type="button"
           onClick={() => onShare(post.id)}
-          className="px-3 py-3 transition hover:bg-[#fff8f2]"
+          disabled={isBusy}
+          className="flex items-center justify-center gap-2 px-3 py-3 transition hover:bg-[#fff8f2] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Share · {post.shares}
+          {pendingAction === "share" ? <LoadingSpinner className="h-3 w-3" /> : null}
+          {pendingAction === "share" ? "Sharing..." : `Share · ${post.shares}`}
         </button>
         <button
           type="button"
           onClick={() => onBookmark(post.id)}
-          className="px-3 py-3 transition hover:bg-[#fff8f2]"
+          disabled={isBusy}
+          className="flex items-center justify-center gap-2 px-3 py-3 transition hover:bg-[#fff8f2] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {post.bookmarked ? "Saved" : "Save"}
+          {pendingAction === "bookmark" ? <LoadingSpinner className="h-3 w-3" /> : null}
+          {pendingAction === "bookmark"
+            ? "Saving..."
+            : post.bookmarked
+              ? "Saved"
+              : "Save"}
         </button>
         <span className="px-3 py-3 text-center">
           {commentCount} {commentCount === 1 ? "comment" : "comments"}
@@ -156,14 +174,17 @@ export function FeedPost({
             value={commentDraft}
             onChange={(event) => onCommentDraftChange(post.id, event.target.value)}
             placeholder="Write a comment..."
+            disabled={pendingAction === "comment"}
             className="h-10 flex-1 rounded-full border border-[#eadfd4] bg-[#fffaf6] px-4 text-sm font-bold"
           />
           <button
             type="button"
             onClick={() => onAddComment(post.id)}
-            className="rounded-full bg-[#211f1d] px-4 text-sm font-black text-white"
+            disabled={isBusy || !commentDraft.trim()}
+            className="flex min-w-20 items-center justify-center gap-2 rounded-full bg-[#211f1d] px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Send
+            {pendingAction === "comment" ? <LoadingSpinner className="h-3 w-3" /> : null}
+            {pendingAction === "comment" ? "Sending..." : "Send"}
           </button>
         </div>
       </div>

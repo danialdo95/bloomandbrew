@@ -1,9 +1,11 @@
+import { LoadingSpinner } from "@/components/social/LoadingSpinner";
 import type { DemoUser, SocialProfile } from "@/types/social";
 
 type SocialHeroProps = {
   isAuthenticated: boolean;
   profile: SocialProfile;
   currentUser: DemoUser | null;
+  isSigningOut?: boolean;
   onSignIn: () => void;
   onSignUp: () => void;
   onSignOut: () => void;
@@ -12,6 +14,7 @@ type SocialHeroProps = {
 export function SocialHero({
   isAuthenticated,
   profile,
+  isSigningOut = false,
   onSignIn,
   onSignUp,
   onSignOut,
@@ -47,9 +50,11 @@ export function SocialHero({
                 <button
                   type="button"
                   onClick={onSignOut}
-                  className="mt-4 rounded-full border border-[#211f1d] px-4 py-2 text-sm font-black text-[#211f1d] transition hover:bg-[#211f1d] hover:text-white"
+                  disabled={isSigningOut}
+                  className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#211f1d] px-4 py-2 text-sm font-black text-[#211f1d] transition hover:bg-[#211f1d] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Sign out
+                  {isSigningOut ? <LoadingSpinner /> : null}
+                  {isSigningOut ? "Signing out..." : "Sign out"}
                 </button>
               </>
             ) : (

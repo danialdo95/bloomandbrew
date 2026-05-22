@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AuthModal } from "@/components/social/AuthModal";
-import { FeedPost } from "@/components/social/FeedPost";
+import { FeedPost, type FeedPostPendingAction } from "@/components/social/FeedPost";
+import { LoadingSpinner } from "@/components/social/LoadingSpinner";
 import { PostComposer } from "@/components/social/PostComposer";
 import { ProfilePanel } from "@/components/social/ProfilePanel";
 import { SocialHero } from "@/components/social/SocialHero";
@@ -114,7 +115,17 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
+  const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isFeedLoading, setIsFeedLoading] = useState(true);
+  const [isExternalFeedLoading, setIsExternalFeedLoading] = useState(false);
+  const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [pendingFollowId, setPendingFollowId] = useState<string | null>(null);
+  const [pendingPostActions, setPendingPostActions] = useState<
+    Record<string, Exclude<FeedPostPendingAction, null>>
+  >({});
   const [feedMode, setFeedMode] = useState<FeedMode>("for-you");
   const [followRefreshKey, setFollowRefreshKey] = useState(0);
   const postsRef = useRef(posts);
@@ -135,6 +146,18 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   useEffect(() => {
     postsRef.current = posts;
   }, [posts]);
+
+  function setPostPending(postId: string, action: Exclude<FeedPostPendingAction, null>) {
+    setPendingPostActions((current) => ({ ...current, [postId]: action }));
+  }
+
+  function clearPostPending(postId: string) {
+    setPendingPostActions((current) => {
+      const next = { ...current };
+      delete next[postId];
+      return next;
+    });
+  }
 
   useEffect(() => {
     async function loadSession() {
@@ -194,8 +217,11 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         return;
       }
 
+      setIsFeedLoading(true);
+
       if (feedMode === "following" && !isAuthenticated) {
         setPosts([]);
+        setIsFeedLoading(false);
         return;
       }
 
@@ -234,6 +260,10 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         });
       } catch (error) {
         console.error(error);
+      } finally {
+        if (active) {
+          setIsFeedLoading(false);
+        }
       }
     }
 
@@ -250,8 +280,11 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     async function loadSuggestedFollows() {
       if (!isAuthenticated) {
         setSuggestedFollows([]);
+        setIsSuggestionsLoading(false);
         return;
       }
+
+      setIsSuggestionsLoading(true);
 
       try {
         const response = await fetch("/api/users/suggestions");
@@ -262,6 +295,10 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         }
       } catch (error) {
         console.error(error);
+      } finally {
+        if (active) {
+          setIsSuggestionsLoading(false);
+        }
       }
     }
 
@@ -279,6 +316,8 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       if (feedMode !== "for-you") {
         return;
       }
+
+      setIsExternalFeedLoading(true);
 
       try {
         const response = await fetch("/api/youtube");
@@ -304,6 +343,10 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         });
       } catch (error) {
         console.error(error);
+      } finally {
+        if (active) {
+          setIsExternalFeedLoading(false);
+        }
       }
     }
 
@@ -395,6 +438,8 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     );
   }, [posts]);
 
+  const isFeedBusy = isFeedLoading || isExternalFeedLoading;
+
   function addNotification(text: string) {
     const optimisticNotification = {
       id: crypto.randomUUID(),
@@ -472,6 +517,10 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   }
 
   function handleAuthSubmit() {
+    if (isAuthSubmitting) {
+      return;
+    }
+
     const email = authEmail.trim().toLowerCase();
     const password = authPassword.trim();
     const name = authName.trim();
@@ -490,6 +539,9 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   }
 
   async function signUp(email: string, password: string, name: string) {
+    setIsAuthSubmitting(true);
+    setAuthError("");
+
     try {
       const response = await fetch("/api/auth/signup", {
         method: "POST",
@@ -513,10 +565,15 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       setAuthError(
         error instanceof Error ? error.message : "Account could not be created.",
       );
+    } finally {
+      setIsAuthSubmitting(false);
     }
   }
 
   async function signIn(email: string, password: string) {
+    setIsAuthSubmitting(true);
+    setAuthError("");
+
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -538,17 +595,25 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       addNotification("Signed in successfully.");
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Invalid email or password.");
+    } finally {
+      setIsAuthSubmitting(false);
     }
   }
 
   async function signOut() {
-    await fetch("/api/auth/logout", {
-      method: "POST",
-    });
-    setCurrentUser(null);
-    setProfile(defaultProfile);
-    setFeedMode("for-you");
-    addNotification("Signed out of your account.");
+    setIsSigningOut(true);
+
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+      setCurrentUser(null);
+      setProfile(defaultProfile);
+      setFeedMode("for-you");
+      addNotification("Signed out of your account.");
+    } finally {
+      setIsSigningOut(false);
+    }
   }
 
   async function updateProfile(nextProfile: SocialProfile) {
@@ -628,8 +693,13 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       return;
     }
 
+    if (pendingPostActions[postId]) {
+      return;
+    }
+
     const targetPost = posts.find((post) => post.id === postId);
     const isPostInDatabase = targetPost ? isDatabasePost(targetPost) : false;
+    setPostPending(postId, "like");
 
     if (isPostInDatabase) {
       try {
@@ -664,11 +734,13 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
           ),
         );
         addNotification(data.liked ? "Post liked." : "Post unliked.");
+        clearPostPending(postId);
         return;
       } catch (error) {
         addNotification(
           error instanceof Error ? error.message : "Like could not be recorded.",
         );
+        clearPostPending(postId);
         return;
       }
     }
@@ -705,11 +777,13 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
           ),
         );
         addNotification(data.liked ? "Post liked." : "Post unliked.");
+        clearPostPending(postId);
         return;
       } catch (error) {
         addNotification(
           error instanceof Error ? error.message : "Like could not be recorded.",
         );
+        clearPostPending(postId);
         return;
       }
     }
@@ -726,6 +800,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       ),
     );
     addNotification("A feed interaction was recorded.");
+    clearPostPending(postId);
   }
 
   async function toggleBookmark(postId: string) {
@@ -733,8 +808,13 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       return;
     }
 
+    if (pendingPostActions[postId]) {
+      return;
+    }
+
     const targetPost = posts.find((post) => post.id === postId);
     const isPostInDatabase = targetPost ? isDatabasePost(targetPost) : false;
+    setPostPending(postId, "bookmark");
 
     if (isPostInDatabase) {
       try {
@@ -764,11 +844,13 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
           ),
         );
         addNotification(bookmarked ? "Post saved." : "Post removed from saved.");
+        clearPostPending(postId);
         return;
       } catch (error) {
         addNotification(
           error instanceof Error ? error.message : "Save could not be recorded.",
         );
+        clearPostPending(postId);
         return;
       }
     }
@@ -798,11 +880,13 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
           ),
         );
         addNotification(data.bookmarked ? "Post saved." : "Post removed from saved.");
+        clearPostPending(postId);
         return;
       } catch (error) {
         addNotification(
           error instanceof Error ? error.message : "Save could not be recorded.",
         );
+        clearPostPending(postId);
         return;
       }
     }
@@ -812,10 +896,15 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         post.id === postId ? { ...post, bookmarked: !post.bookmarked } : post,
       ),
     );
+    clearPostPending(postId);
   }
 
   async function sharePost(postId: string) {
     if (!requireAuth("share posts")) {
+      return;
+    }
+
+    if (pendingPostActions[postId]) {
       return;
     }
 
@@ -828,6 +917,8 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     const endpoint = isExternalPost(targetPost)
       ? `/api/external-posts/${postId}/shares`
       : `/api/posts/${postId}/shares`;
+
+    setPostPending(postId, "share");
 
     try {
       const response = await fetch(endpoint, {
@@ -872,11 +963,17 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       addNotification(
         error instanceof Error ? error.message : "Share could not be recorded.",
       );
+    } finally {
+      clearPostPending(postId);
     }
   }
 
   async function addComment(postId: string) {
     if (!requireAuth("comment")) {
+      return;
+    }
+
+    if (pendingPostActions[postId]) {
       return;
     }
 
@@ -888,6 +985,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
 
     const targetPost = posts.find((post) => post.id === postId);
     const isPostInDatabase = targetPost ? isDatabasePost(targetPost) : false;
+    setPostPending(postId, "comment");
 
     if (isPostInDatabase) {
       try {
@@ -924,11 +1022,13 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         );
         setCommentDrafts((current) => ({ ...current, [postId]: "" }));
         addNotification("Your comment was saved to the database.");
+        clearPostPending(postId);
         return;
       } catch (error) {
         addNotification(
           error instanceof Error ? error.message : "Comment could not be added.",
         );
+        clearPostPending(postId);
         return;
       }
     }
@@ -968,11 +1068,13 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         );
         setCommentDrafts((current) => ({ ...current, [postId]: "" }));
         addNotification("Your comment was saved to the database.");
+        clearPostPending(postId);
         return;
       } catch (error) {
         addNotification(
           error instanceof Error ? error.message : "Comment could not be added.",
         );
+        clearPostPending(postId);
         return;
       }
     }
@@ -996,6 +1098,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     );
     setCommentDrafts((current) => ({ ...current, [postId]: "" }));
     addNotification("Your comment was added.");
+    clearPostPending(postId);
   }
 
   async function toggleFollow(person: SuggestedPerson) {
@@ -1007,6 +1110,12 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       addNotification("This suggested creator is not available yet.");
       return;
     }
+
+    if (pendingFollowId) {
+      return;
+    }
+
+    setPendingFollowId(person.id);
 
     try {
       const response = await fetch(`/api/users/${person.id}/follow`, {
@@ -1054,6 +1163,8 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       addNotification(
         error instanceof Error ? error.message : "Follow status could not be updated.",
       );
+    } finally {
+      setPendingFollowId(null);
     }
   }
 
@@ -1062,18 +1173,28 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       return;
     }
 
+    if (isLocating) {
+      return;
+    }
+
     if (!navigator.geolocation) {
       addNotification("Geolocation is not available in this browser.");
       return;
     }
+
+    setIsLocating(true);
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const nextLocation = `${position.coords.latitude.toFixed(3)}, ${position.coords.longitude.toFixed(3)}`;
         setLocation(nextLocation);
         addNotification("Location tag updated.");
+        setIsLocating(false);
       },
-      () => addNotification("Location permission was not granted."),
+      () => {
+        addNotification("Location permission was not granted.");
+        setIsLocating(false);
+      },
     );
   }
 
@@ -1112,6 +1233,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         isAuthenticated={isAuthenticated}
         profile={profile}
         currentUser={currentUser}
+        isSigningOut={isSigningOut}
         onSignIn={() => openAuth("signin")}
         onSignUp={() => openAuth("signup")}
         onSignOut={signOut}
@@ -1128,6 +1250,8 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
           />
           <SuggestedFollows
             people={suggestedFollows}
+            isLoading={isSuggestionsLoading}
+            pendingUserId={pendingFollowId}
             onToggleFollow={toggleFollow}
           />
         </aside>
@@ -1170,7 +1294,21 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
               void publishPost();
             }}
             isPublishing={isPublishing}
+            isLocating={isLocating}
           />
+
+          {isFeedBusy ? (
+            <div
+              className="flex items-center gap-3 rounded-[6px] border border-[#eadfd4] bg-white px-5 py-4 text-sm font-black text-[#6f6259] shadow-[0_8px_24px_rgba(64,45,35,0.06)]"
+              aria-live="polite"
+              aria-busy="true"
+            >
+              <LoadingSpinner className="text-[#c45572]" />
+              {feedMode === "following"
+                ? "Loading your following feed..."
+                : "Refreshing Bloom, Reddit, and YouTube posts..."}
+            </div>
+          ) : null}
 
           {posts.length ? (
             posts.map((post) => (
@@ -1178,6 +1316,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
                 key={post.id}
                 post={post}
                 commentDraft={commentDrafts[post.id] ?? ""}
+                pendingAction={pendingPostActions[post.id] ?? null}
                 onLike={toggleLike}
                 onShare={sharePost}
                 onBookmark={(postId) => {
@@ -1224,7 +1363,11 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
           authEmail={authEmail}
           authPassword={authPassword}
           authError={authError}
+          isSubmitting={isAuthSubmitting}
           onClose={() => {
+            if (isAuthSubmitting) {
+              return;
+            }
             setAuthOpen(false);
             setAuthError("");
           }}
