@@ -1,51 +1,107 @@
-# Bloom and Brew
+# Bloom & Brew Social
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Bloom & Brew Social is a Next.js social media prototype for cafe, coffee, florist, and bouquet communities. It combines Reddit-powered discovery, YouTube video suggestions, PostgreSQL-backed user posts, profiles, comments, likes, saves, shares, follows, and in-app notifications.
+
+## Features
+
+- Sign up, sign in, sign out, and editable profile cards
+- PostgreSQL-backed user posts, comments, likes, bookmarks, shares, follows, sessions, and notifications
+- Reddit public JSON feed with curated fallback content
+- YouTube Data API feed with fallback content
+- Composer media field that supports image URLs and YouTube URLs
+- Embedded YouTube videos for API videos and user-created posts
+- Suggested follows, public profile pages, For You and Following feeds
+- Mobile-responsive navigation with a notification bell
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies:
+
+```bash
+npm install
+```
+
+Create a local `.env` file with the required values:
+
+```bash
+DATABASE_URL="postgresql://..."
+YOUTUBE_API_KEY="your-youtube-api-key"
+```
+
+Generate Prisma Client:
+
+```bash
+npx prisma generate
+```
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). If port `3000` is already in use, Next.js may choose another local port such as `3001`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Database
 
-## Deploy on Leapcell
+This project uses Prisma ORM with PostgreSQL.
 
-This repository includes `leapcell.yaml` with the deployment settings Leapcell needs:
+Useful commands:
 
-```yaml
-runtime: javascript
-buildCommand: npm install && npm run build
-startCommand: npm start
-port: 3000
-memory: 1024mb
+```bash
+npx prisma migrate dev
+npx prisma db seed
+npx prisma studio
 ```
 
-If you configure the service manually in the Leapcell dashboard, use:
+The Prisma schema is in `prisma/schema.prisma`, and the app uses the Prisma singleton in `src/lib/prisma.ts`.
 
-- Runtime: Node.js
-- Build Command: `npm install && npm run build`
-- Start Command: `npm start`
-- Port: `3000`
+## Deployment on Vercel
 
-Leapcell's default port is `8080`, but Next.js starts on `3000` by default, so keep the service port set to `3000`.
+Leapcell is no longer the target deployment platform for this project. Deploy with Vercel using the Next.js framework preset.
 
-## Learn More
+Recommended Vercel settings:
 
-To learn more about Next.js, take a look at the following resources:
+- Framework Preset: `Next.js`
+- Build Command: `npm run build`
+- Install Command: Vercel default
+- Output Directory: Vercel default
+- Start Command: Managed by Vercel
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Add these environment variables in Vercel:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+DATABASE_URL
+YOUTUBE_API_KEY
+```
+
+The build script already runs Prisma generation before the Next.js build:
+
+```json
+{
+  "build": "prisma generate && next build"
+}
+```
+
+## Media Links
+
+The post composer's media field accepts:
+
+- Direct image URLs
+- YouTube watch links, for example `https://www.youtube.com/watch?v=VIDEO_ID`
+- YouTube Shorts links, for example `https://youtube.com/shorts/VIDEO_ID`
+- `youtu.be`, `/embed`, and `/live` YouTube URLs
+
+YouTube URLs are parsed in `src/lib/youtube-url.ts` and rendered as embedded videos in the feed.
+
+## Scripts
+
+```bash
+npm run dev
+npm run build
+npm run start
+```
+
+## More Detail
+
+See `bloom_and_brew_tech_spec.md` for the full technical specification and current implementation status.

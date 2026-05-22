@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getYouTubeVideoId, getYouTubeWatchUrl } from "@/lib/youtube-url";
 import type { SocialPost } from "@/types/social";
 
 function toSocialPost(post: {
@@ -32,6 +33,8 @@ function toSocialPost(post: {
     avatar: string;
   };
 }, viewer?: string): SocialPost {
+  const youtubeVideoId = getYouTubeVideoId(post.imageUrl);
+
   return {
     id: post.id,
     source: "bloom",
@@ -40,7 +43,10 @@ function toSocialPost(post: {
     avatar: post.author.avatar,
     community: post.community,
     content: post.content,
-    imageUrl: post.imageUrl,
+    imageUrl: youtubeVideoId ? null : post.imageUrl,
+    youtubeVideoId: youtubeVideoId ?? undefined,
+    youtubeUrl: youtubeVideoId ? getYouTubeWatchUrl(youtubeVideoId) : undefined,
+    youtubeChannel: youtubeVideoId ? "Shared YouTube video" : undefined,
     filter: post.filter,
     location: post.location ?? "Bloom & Brew Social",
     createdAt: post.createdAt.toISOString(),
@@ -136,7 +142,7 @@ export async function POST(request: Request) {
     : "Bloom & Brew Social";
   if (!content && !imageUrl) {
     return NextResponse.json(
-      { error: "Post content or image URL is required." },
+      { error: "Post content or media URL is required." },
       { status: 400 },
     );
   }

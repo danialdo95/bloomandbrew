@@ -5,6 +5,7 @@ import { PublicProfileFollowButton } from "@/components/social/PublicProfileFoll
 import { filterClasses, filterStyles, getTimeLabel } from "@/lib/social";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getYouTubeVideoId, getYouTubeWatchUrl } from "@/lib/youtube-url";
 
 type UserProfilePageProps = {
   params: Promise<{
@@ -114,11 +115,15 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
 
       <section className="mx-auto max-w-3xl space-y-5 px-4 py-6 md:px-5">
         {user.posts.length ? (
-          user.posts.map((post) => (
-            <article
-              key={post.id}
-              className="rounded-[6px] border border-[#eadfd4] bg-white shadow-[0_8px_24px_rgba(64,45,35,0.06)]"
-            >
+          user.posts.map((post) => {
+            const youtubeVideoId = getYouTubeVideoId(post.imageUrl);
+            const youtubeUrl = youtubeVideoId ? getYouTubeWatchUrl(youtubeVideoId) : null;
+
+            return (
+              <article
+                key={post.id}
+                className="rounded-[6px] border border-[#eadfd4] bg-white shadow-[0_8px_24px_rgba(64,45,35,0.06)]"
+              >
               <div className="flex items-start gap-3 p-5">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7c6cf] text-sm font-black">
                   {user.avatar}
@@ -142,7 +147,29 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
                 </div>
               </div>
 
-              {post.imageUrl ? (
+              {youtubeVideoId ? (
+                <div className="px-5 pb-4">
+                  <div className="overflow-hidden rounded-[6px] border border-[#eadfd4] bg-[#211f1d]">
+                    <iframe
+                      className="aspect-video w-full"
+                      src={`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=0&rel=0`}
+                      title={post.content}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  </div>
+                  {youtubeUrl ? (
+                    <a
+                      href={youtubeUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 inline-flex text-sm font-black text-[#c45572] hover:underline"
+                    >
+                      Watch on YouTube
+                    </a>
+                  ) : null}
+                </div>
+              ) : post.imageUrl ? (
                 <div className="px-5 pb-4">
                   <div className="overflow-hidden rounded-[6px] border border-[#eadfd4] bg-[#fff8f2]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -165,8 +192,9 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
                   {post.savedBy.length.toLocaleString()} saves
                 </span>
               </div>
-            </article>
-          ))
+              </article>
+            );
+          })
         ) : (
           <div className="rounded-[6px] border border-dashed border-[#d8c8bc] bg-white p-8 text-center shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
             <h2 className="text-xl font-black text-[#211f1d]">No posts yet</h2>

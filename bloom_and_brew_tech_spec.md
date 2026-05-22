@@ -12,7 +12,7 @@
 ## Project Description
 Bloom & Brew Social is a web-based social media prototype focused on cafe culture, coffee communities, floral inspiration, and florist aesthetics. The application integrates Reddit community data into a custom social feed and layers core social media interactions on top of that feed.
 
-The latest implementation is no longer only a dashboard. It now behaves like a social media application where users can create an account, personalize a profile, publish posts, interact with posts, follow suggested creators, receive in-app notifications, chat, start a live-room demo, add image filters, and tag locations.
+The latest implementation is no longer only a dashboard. It now behaves like a social media application where users can create an account, personalize a profile, publish posts, attach image or YouTube media links, interact with posts, follow suggested creators, receive in-app notifications, chat, start a live-room demo, add image filters, and tag locations.
 
 The first database migration steps have also been completed. User accounts, sessions, user-created posts, comments, likes, saves/bookmarks, shares, notifications, and follow relationships are now stored in PostgreSQL through Prisma ORM, while secondary interactions such as chat and polls remain browser-local.
 
@@ -180,7 +180,7 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Database-backed user-created posts
 - Unified age sorting across Bloom, Reddit, and YouTube sources
 - Text post composer
-- Image URL attachment
+- Media URL attachment for image links and YouTube links
 - Media filter selection
 - Location tagging
 - Like button
@@ -188,9 +188,11 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Share counter
 - Save/bookmark state
 - Embedded YouTube videos inside feed posts
+- Composer preview for pasted YouTube watch, Shorts, embed, live, and youtu.be links
 
 ## Current Persistence Split
 - User-created post records are saved to PostgreSQL.
+- User-created YouTube links are stored in the existing media URL field and rendered as embedded videos when displayed.
 - Reddit posts remain external feed content.
 - YouTube video posts remain external feed content.
 - Comments on database-backed posts are saved in PostgreSQL.
@@ -388,7 +390,7 @@ The Community page demonstrates polls and community participation.
 | 2 | Profile Personalization | Editable profile card with database-backed name, username, bio, avatar initials, location |
 | 3 | News Feed | Age-sorted feed combining PostgreSQL-backed user posts, Reddit posts, and YouTube posts |
 | 4 | Push Notifications | Database-backed in-app notification bell plus browser notification permission request |
-| 5 | Content Sharing | Composer, PostgreSQL-backed post publishing, share counter, image URL support |
+| 5 | Content Sharing | Composer, PostgreSQL-backed post publishing, share counter, image URL and YouTube URL support |
 | 6 | In-App Chat / Calling | In-app chat demo; calling not implemented |
 | 7 | Follow / Friend Requests | Suggested creators with PostgreSQL-backed follow/unfollow |
 | 8 | Media Editing | CSS-based image filters in composer |
@@ -402,7 +404,7 @@ The Community page demonstrates polls and community participation.
 | ID | Requirement | Status |
 |---|---|---|
 | FR-01 | System shall fetch Reddit posts | Implemented |
-| FR-02 | System shall display images and rich content | Implemented |
+| FR-02 | System shall display images and rich content | Implemented with images and embedded YouTube videos |
 | FR-03 | Users shall sign up and sign in | Implemented with PostgreSQL users, hashed passwords, and session cookies |
 | FR-04 | Users shall personalize profiles | Implemented with PostgreSQL persistence |
 | FR-05 | Users shall publish posts | Implemented with PostgreSQL persistence |
@@ -544,13 +546,14 @@ POST /api/posts
 
 ### Description
 Creates a new Bloom & Brew post in PostgreSQL for the authenticated user.
+The `imageUrl` field currently acts as a media URL. If it contains a supported YouTube URL, the application derives the video id and renders an embedded YouTube iframe instead of an image. Supported formats include `youtube.com/watch?v=...`, `youtube.com/shorts/...`, `youtube.com/embed/...`, `youtube.com/live/...`, and `youtu.be/...`.
 
 ### Request Shape
 
 ```json
 {
   "content": "New cafe and bouquet idea",
-  "imageUrl": "https://example.com/image.jpg",
+  "imageUrl": "https://example.com/image.jpg or https://www.youtube.com/watch?v=VIDEO_ID",
   "filter": "Blush",
   "location": "Kuala Lumpur"
 }
@@ -835,6 +838,7 @@ src/
     reddit.ts
     social.ts
     trends.ts
+    youtube-url.ts
   types/
     reddit.ts
     social.ts
@@ -923,6 +927,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - `GET /api/users/suggestions`
 - `POST /api/users/[id]/follow`
 - Embedded YouTube video posts in the homepage feed
+- User-created posts can embed YouTube links pasted into the composer media field
 - `GET /api/posts` and `POST /api/posts`
 - `POST /api/posts/[id]/comments`
 - `POST /api/posts/[id]/likes`
@@ -934,7 +939,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - `POST /api/external-posts/[id]/bookmarks`
 - `POST /api/external-posts/[id]/shares`
 - Prisma schema, migrations, generated client, seed script, and verification script
-- Image URL posting and CSS filter selection
+- Media URL posting, YouTube URL embedding, and CSS filter selection
 - Location tagging in the composer
 - Database-backed in-app notifications
 - `GET /api/notifications`

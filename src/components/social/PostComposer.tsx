@@ -1,5 +1,6 @@
 import { LoadingSpinner } from "@/components/social/LoadingSpinner";
 import { filterClasses, filterStyles } from "@/lib/social";
+import { getYouTubeVideoId, getYouTubeWatchUrl } from "@/lib/youtube-url";
 import type { SocialProfile } from "@/types/social";
 
 type PostComposerProps = {
@@ -33,6 +34,9 @@ export function PostComposer({
   isPublishing = false,
   isLocating = false,
 }: PostComposerProps) {
+  const youtubeVideoId = getYouTubeVideoId(imageUrl);
+  const youtubeUrl = youtubeVideoId ? getYouTubeWatchUrl(youtubeVideoId) : null;
+
   return (
     <div className="rounded-[6px] border border-[#eadfd4] bg-white p-5 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
       <div className="flex gap-3">
@@ -54,12 +58,12 @@ export function PostComposer({
           <div className="mt-3 grid gap-3 md:grid-cols-3">
             <label className="block">
               <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.12em] text-[#8a7d73]">
-                Photo link
+                Media link
               </span>
               <input
                 value={imageUrl}
                 onChange={(event) => onImageUrlChange(event.target.value)}
-                placeholder="Paste image URL"
+                placeholder="Paste image or YouTube URL"
                 className="h-10 w-full rounded-[6px] border border-[#eadfd4] bg-white px-3 text-sm font-bold"
               />
             </label>
@@ -95,7 +99,27 @@ export function PostComposer({
             </label>
           </div>
 
-          {imageUrl ? (
+          {youtubeVideoId ? (
+            <div className="mt-3 overflow-hidden rounded-[6px] border border-[#eadfd4] bg-[#211f1d]">
+              <iframe
+                className="aspect-video w-full"
+                src={`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=0&rel=0`}
+                title="YouTube video preview"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+              {youtubeUrl ? (
+                <a
+                  href={youtubeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block bg-white px-3 py-2 text-xs font-black text-[#c45572] hover:underline"
+                >
+                  Previewing YouTube video
+                </a>
+              ) : null}
+            </div>
+          ) : imageUrl ? (
             <div className="mt-3 overflow-hidden rounded-[6px] border border-[#eadfd4]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
