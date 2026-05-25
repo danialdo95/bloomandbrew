@@ -1,14 +1,10 @@
 import { TrendTags } from "@/components/TrendTags";
 
-const calendarDays = [
-  { label: "Mon", day: "25", event: null },
-  { label: "Tue", day: "26", event: "Latte art" },
-  { label: "Wed", day: "27", event: null },
-  { label: "Thu", day: "28", event: "Bouquet drop" },
-  { label: "Fri", day: "29", event: null },
-  { label: "Sat", day: "30", event: "Cafe crawl" },
-  { label: "Sun", day: "31", event: null },
-];
+const calendarEvents: Record<number, string> = {
+  2: "Latte art",
+  4: "Bouquet drop",
+  6: "Cafe crawl",
+};
 
 type SocialSidebarProps = {
   trends: Array<{ label: string; count: number }>;
@@ -16,6 +12,13 @@ type SocialSidebarProps = {
 };
 
 export function SocialSidebar({ trends, source }: SocialSidebarProps) {
+  const today = new Date();
+  const calendarDays = getCurrentWeek(today);
+  const monthLabel = today.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
   return (
     <aside className="order-3 space-y-5 lg:order-none">
       <section className="rounded-[6px] border border-[#eadfd4] bg-white p-5 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
@@ -24,7 +27,7 @@ export function SocialSidebar({ trends, source }: SocialSidebarProps) {
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#c45572]">
               Bloom calendar
             </p>
-            <h2 className="mt-2 text-2xl font-black text-[#211f1d]">May 2026</h2>
+            <h2 className="mt-2 text-2xl font-black text-[#211f1d]">{monthLabel}</h2>
           </div>
           <span className="rounded-full bg-[#fff176] px-3 py-1 text-xs font-black text-[#211f1d]">
             This week
@@ -34,9 +37,11 @@ export function SocialSidebar({ trends, source }: SocialSidebarProps) {
         <div className="mt-5 grid grid-cols-7 gap-2">
           {calendarDays.map((item) => (
             <div
-              key={item.day}
+              key={item.isoDate}
               className={`min-h-20 rounded-[6px] border px-2 py-2 text-center ${
-                item.event
+                item.isToday
+                  ? "border-[#211f1d] bg-[#fff176]"
+                  : item.event
                   ? "border-[#c45572] bg-[#fff8f2]"
                   : "border-[#eadfd4] bg-white"
               }`}
@@ -46,7 +51,9 @@ export function SocialSidebar({ trends, source }: SocialSidebarProps) {
               </p>
               <p className="mt-1 text-lg font-black text-[#211f1d]">{item.day}</p>
               {item.event ? (
-                <p className="mt-1 text-[10px] font-black leading-4 text-[#c45572]">
+                <p className={`mt-1 text-[10px] font-black leading-4 ${
+                  item.isToday ? "text-[#211f1d]" : "text-[#c45572]"
+                }`}>
                   {item.event}
                 </p>
               ) : null}
@@ -81,4 +88,29 @@ export function SocialSidebar({ trends, source }: SocialSidebarProps) {
       </section>
     </aside>
   );
+}
+
+function getCurrentWeek(today: Date) {
+  const startOfWeek = new Date(today);
+  const dayOffset = (today.getDay() + 6) % 7;
+  startOfWeek.setDate(today.getDate() - dayOffset);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(startOfWeek);
+    date.setDate(startOfWeek.getDate() + index);
+
+    return {
+      label: date.toLocaleDateString("en-US", { weekday: "short" }),
+      day: date.toLocaleDateString("en-US", { day: "numeric" }),
+      isoDate: date.toISOString(),
+      event: calendarEvents[index] ?? null,
+      isToday: isSameDate(date, today),
+    };
+  });
+}
+
+function isSameDate(first: Date, second: Date) {
+  return first.getFullYear() === second.getFullYear()
+    && first.getMonth() === second.getMonth()
+    && first.getDate() === second.getDate();
 }
