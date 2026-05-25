@@ -56,7 +56,7 @@ export function SocialSidebar({ trends, source }: SocialSidebarProps) {
 
         <div className="mt-5 space-y-3">
           <div className="rounded-[6px] bg-[#fff8f2] p-3">
-            <p className="text-sm font-black text-[#211f1d]">Latte art prompts</p>
+            <p className="text-sm font-black text-[#211f1d]">Latte art class</p>
             <p className="mt-1 text-xs font-bold leading-5 text-[#6f6259]">
               Share a pour, cafe corner, or flower pairing for the community feed.
             </p>
