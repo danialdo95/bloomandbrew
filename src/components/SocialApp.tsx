@@ -47,6 +47,10 @@ function isExternalPost(post: SocialPost) {
   return post.source === "reddit" || post.source === "youtube";
 }
 
+function canDeletePost(post: SocialPost, user: DemoUser | null) {
+  return post.source === "bloom" && Boolean(user) && post.username === user?.profile.username;
+}
+
 function sortPostsByAge(posts: SocialPost[]) {
   return [...posts].sort(
     (first, second) =>
@@ -1083,6 +1087,54 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     clearPostPending(postId);
   }
 
+  async function deletePost(postId: string) {
+    if (!requireAuth("delete posts")) {
+      return;
+    }
+
+    if (pendingPostActions[postId]) {
+      return;
+    }
+
+    const targetPost = posts.find((post) => post.id === postId);
+
+    if (!targetPost || !canDeletePost(targetPost, currentUser)) {
+      addNotification("You can only delete your own Bloom & Brew posts.");
+      return;
+    }
+
+    const confirmed = window.confirm("Delete this post?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPostPending(postId, "delete");
+
+    try {
+      const response = await fetch(`/api/posts/${postId}`, {
+        method: "DELETE",
+      });
+      const data = (await response.json()) as {
+        deleted?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok || !data.deleted) {
+        throw new Error(data.error ?? "Post could not be deleted.");
+      }
+
+      setPosts((current) => current.filter((post) => post.id !== postId));
+      addNotification("Post deleted.");
+    } catch (error) {
+      addNotification(
+        error instanceof Error ? error.message : "Post could not be deleted.",
+      );
+    } finally {
+      clearPostPending(postId);
+    }
+  }
+
   async function toggleFollow(person: SuggestedPerson) {
     if (!requireAuth("follow creators")) {
       return;
@@ -1270,10 +1322,14 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
                 post={post}
                 commentDraft={commentDrafts[post.id] ?? ""}
                 pendingAction={pendingPostActions[post.id] ?? null}
+                canDelete={canDeletePost(post, currentUser)}
                 onLike={toggleLike}
                 onShare={sharePost}
                 onBookmark={(postId) => {
                   void toggleBookmark(postId);
+                }}
+                onDelete={(postId) => {
+                  void deletePost(postId);
                 }}
                 onCommentDraftChange={(postId, value) =>
                   setCommentDrafts((current) => ({ ...current, [postId]: value }))

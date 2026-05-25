@@ -254,9 +254,10 @@ Users can interact with posts and creators.
 - Comment on posts
 - Share posts
 - Save/bookmark posts
+- Delete own Bloom & Brew posts
 - Follow/unfollow suggested creators
 
-Likes, comments, saves/bookmarks, shares, notifications, and follows are persisted in PostgreSQL for Bloom & Brew database-backed content and users. Reddit and YouTube posts remain external feed items, but their likes, comments, saves, and shares are persisted as external-post interactions. Polls are still local/demo features. Chat and live-room features are hidden from the current UI and moved to backlog.
+Likes, comments, saves/bookmarks, shares, notifications, follows, and post deletion are persisted in PostgreSQL for Bloom & Brew database-backed content and users. Reddit and YouTube posts remain external feed items, but their likes, comments, saves, and shares are persisted as external-post interactions. Polls are still local/demo features. Chat and live-room features are hidden from the current UI and moved to backlog.
 
 ---
 
@@ -478,6 +479,15 @@ GET /api/reddit
   "fetchedAt": "2026-05-14T00:00:00.000Z"
 }
 ```
+
+### Endpoint
+
+```http
+DELETE /api/posts/[id]
+```
+
+### Description
+Deletes an authenticated user's own Bloom & Brew post. Reddit and YouTube external feed posts cannot be deleted from Bloom & Brew.
 
 The `source` field can be either `reddit` or `fallback`.
 
@@ -928,6 +938,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - `POST /api/posts/[id]/likes`
 - `POST /api/posts/[id]/bookmarks`
 - `POST /api/posts/[id]/shares`
+- `DELETE /api/posts/[id]`
 - `POST /api/external-posts/sync`
 - `POST /api/external-posts/[id]/comments`
 - `POST /api/external-posts/[id]/likes`

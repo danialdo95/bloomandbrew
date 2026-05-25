@@ -6,6 +6,7 @@ Bloom & Brew Social is a Next.js social media prototype for cafe, coffee, floris
 
 - Sign up, sign in, sign out, and editable profile cards
 - PostgreSQL-backed user posts, comments, likes, bookmarks, shares, follows, sessions, and notifications
+- Owner-only delete action for user-created Bloom & Brew posts
 - Reddit public JSON feed with curated fallback content
 - YouTube Data API feed with fallback content
 - Composer media field that supports image URLs and YouTube URLs

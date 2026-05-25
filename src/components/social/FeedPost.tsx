@@ -1,18 +1,29 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 
 import { LoadingSpinner } from "@/components/social/LoadingSpinner";
 import { filterClasses, filterStyles, getTimeLabel } from "@/lib/social";
 import type { SocialPost } from "@/types/social";
 
-export type FeedPostPendingAction = "like" | "share" | "bookmark" | "comment" | null;
+export type FeedPostPendingAction =
+  | "like"
+  | "share"
+  | "bookmark"
+  | "comment"
+  | "delete"
+  | null;
 
 type FeedPostProps = {
   post: SocialPost;
   commentDraft: string;
   pendingAction?: FeedPostPendingAction;
+  canDelete?: boolean;
   onLike: (postId: string) => void;
   onShare: (postId: string) => void;
   onBookmark: (postId: string) => void;
+  onDelete: (postId: string) => void;
   onCommentDraftChange: (postId: string, value: string) => void;
   onAddComment: (postId: string) => void;
 };
@@ -21,12 +32,15 @@ export function FeedPost({
   post,
   commentDraft,
   pendingAction = null,
+  canDelete = false,
   onLike,
   onShare,
   onBookmark,
+  onDelete,
   onCommentDraftChange,
   onAddComment,
 }: FeedPostProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const userCommentCount = post.comments.filter((comment) => !comment.system).length;
   const commentCount =
     post.source === "reddit" || post.source === "youtube"
@@ -85,6 +99,37 @@ export function FeedPost({
             {post.content}
           </p>
         </div>
+        {canDelete ? (
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((current) => !current)}
+              disabled={isBusy}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-xl font-black text-[#6f6259] transition hover:bg-[#fff8f2] disabled:cursor-not-allowed disabled:opacity-60"
+              aria-label="Open post options"
+              aria-expanded={menuOpen}
+            >
+              ...
+            </button>
+            {menuOpen ? (
+              <div className="absolute right-0 z-10 mt-2 w-36 rounded-[6px] border border-[#eadfd4] bg-white p-1 shadow-[0_12px_32px_rgba(33,31,29,0.16)]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onDelete(post.id);
+                  }}
+                  className="flex w-full items-center justify-center gap-2 rounded-[6px] px-3 py-2 text-sm font-black text-[#c45572] transition hover:bg-[#fff8f2]"
+                >
+                  {pendingAction === "delete" ? (
+                    <LoadingSpinner className="h-3 w-3" />
+                  ) : null}
+                  {pendingAction === "delete" ? "Deleting..." : "Delete post"}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {post.youtubeVideoId ? (
