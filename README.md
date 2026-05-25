@@ -11,6 +11,7 @@ Bloom & Brew Social is a Next.js social media prototype for cafe, coffee, floris
 - Composer media field that supports image URLs and YouTube URLs
 - Embedded YouTube videos for API videos and user-created posts
 - Suggested follows, public profile pages, For You and Following feeds
+- Sidebar calendar for cafe/floral content prompts
 - Mobile-responsive navigation with a notification bell
 
 ## Getting Started

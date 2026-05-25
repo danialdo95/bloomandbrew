@@ -12,9 +12,9 @@
 ## Project Description
 Bloom & Brew Social is a web-based social media prototype focused on cafe culture, coffee communities, floral inspiration, and florist aesthetics. The application integrates Reddit community data into a custom social feed and layers core social media interactions on top of that feed.
 
-The latest implementation is no longer only a dashboard. It now behaves like a social media application where users can create an account, personalize a profile, publish posts, attach image or YouTube media links, interact with posts, follow suggested creators, receive in-app notifications, chat, start a live-room demo, add image filters, and tag locations.
+The latest implementation is no longer only a dashboard. It now behaves like a social media application where users can create an account, personalize a profile, publish posts, attach image or YouTube media links, interact with posts, follow suggested creators, receive in-app notifications, use a sidebar calendar, add image filters, and tag locations.
 
-The first database migration steps have also been completed. User accounts, sessions, user-created posts, comments, likes, saves/bookmarks, shares, notifications, and follow relationships are now stored in PostgreSQL through Prisma ORM, while secondary interactions such as chat and polls remain browser-local.
+The first database migration steps have also been completed. User accounts, sessions, user-created posts, comments, likes, saves/bookmarks, shares, notifications, and follow relationships are now stored in PostgreSQL through Prisma ORM. Polls remain browser-local, while chat/calling and live-room features are tracked as backlog items.
 
 The application demonstrates:
 - Managed communities
@@ -110,7 +110,7 @@ External interactions:
 Reddit/YouTube post IDs ─→ /api/external-posts/* ─→ Prisma ─→ PostgreSQL
 
 Remaining demo-only state:
-chat/live/polls ─→ localStorage or React state
+polls ─→ localStorage or React state
 ```
 
 ---
@@ -253,10 +253,8 @@ Users can interact with posts and creators.
 - Share posts
 - Save/bookmark posts
 - Follow/unfollow suggested creators
-- Send demo chat messages
-- Start/end a live-room demo
 
-Likes, comments, saves/bookmarks, shares, notifications, and follows are persisted in PostgreSQL for Bloom & Brew database-backed content and users. Reddit and YouTube posts remain external feed items, but their likes, comments, saves, and shares are persisted as external-post interactions. Chat, live-room status, and polls are still local/demo features.
+Likes, comments, saves/bookmarks, shares, notifications, and follows are persisted in PostgreSQL for Bloom & Brew database-backed content and users. Reddit and YouTube posts remain external feed items, but their likes, comments, saves, and shares are persisted as external-post interactions. Polls are still local/demo features. Chat and live-room features are hidden from the current UI and moved to backlog.
 
 ---
 
@@ -275,25 +273,24 @@ The app has two notification mechanisms:
 - Post shared
 - Comment added
 - Follow status changed
-- Live room started/ended
 - Location updated
 
 Notifications are no longer configured from the post composer. The composer only handles post content, media, filter, and location inputs.
 
 ---
 
-# 6.7 In-App Chat
+# 6.7 Sidebar Calendar
 
 ## Description
-The app includes a demo chat panel.
+The right sidebar now shows a Bloom calendar card instead of the previous chat and live-room demo cards.
 
 ## Features
-- Pre-seeded conversation
-- User can send new chat messages
-- Chat UI distinguishes user messages from other messages
+- Weekly calendar grid
+- Highlighted cafe/floral events
+- Static event prompts for content planning
 
 ## Limitation
-Chat is local-only and not real-time across users.
+The calendar is currently static and does not persist user-created events.
 
 ---
 
@@ -312,19 +309,16 @@ Filters are applied through CSS classes for visual media editing.
 
 ---
 
-# 6.9 Streaming Demo
+# 6.9 Streaming Backlog
 
 ## Description
-The app includes a live-room card.
+The live-room demo is hidden from the current UI and moved to backlog.
 
-## Features
-- Start live
-- End live
-- Visual live status indicator
-- In-app notification when live state changes
-
-## Limitation
-This does not include real video/audio streaming. It demonstrates the streaming platform concept.
+## Backlog Scope
+- Real video/audio streaming
+- Live-room lifecycle state
+- Live notifications
+- Viewer participation
 
 ---
 
@@ -391,10 +385,10 @@ The Community page demonstrates polls and community participation.
 | 3 | News Feed | Age-sorted feed combining PostgreSQL-backed user posts, Reddit posts, and YouTube posts |
 | 4 | Push Notifications | Database-backed in-app notification bell plus browser notification permission request |
 | 5 | Content Sharing | Composer, PostgreSQL-backed post publishing, share counter, image URL and YouTube URL support |
-| 6 | In-App Chat / Calling | In-app chat demo; calling not implemented |
+| 6 | In-App Chat / Calling | Backlog; hidden from current UI |
 | 7 | Follow / Friend Requests | Suggested creators with PostgreSQL-backed follow/unfollow |
 | 8 | Media Editing | CSS-based image filters in composer |
-| 9 | Streaming | Live-room start/end demo |
+| 9 | Streaming | Backlog; live-room demo hidden from current UI |
 | 10 | Geolocation | Browser geolocation tagging |
 
 ---
@@ -412,8 +406,8 @@ The Community page demonstrates polls and community participation.
 | FR-07 | Users shall follow creators | Implemented with PostgreSQL-backed follow relationships |
 | FR-08 | Users shall view trending topics | Implemented |
 | FR-09 | Users shall participate in polls | Implemented locally |
-| FR-10 | Users shall use in-app chat | Implemented as local demo |
-| FR-11 | Users shall start/end a live-room demo | Implemented as local demo |
+| FR-10 | Users shall use in-app chat | Backlog |
+| FR-11 | Users shall start/end a live-room demo | Backlog |
 | FR-12 | System shall support geolocation tagging | Implemented with browser API |
 | FR-13 | System shall be accessible online | Implemented through Vercel deployment |
 | FR-14 | System shall support responsive design | Implemented with Tailwind responsive layouts |
@@ -713,8 +707,7 @@ These routes load and create database-backed in-app notifications for the authen
 - News feed
 - Comments
 - Notifications
-- Chat
-- Live room
+- Sidebar calendar
 - Trending tags
 
 ---
@@ -948,8 +941,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Notification permission moved into the navbar notification menu
 - Explicit profile editor with Save and Cancel controls
 - Age-sorted combined feed across Bloom, Reddit, and YouTube posts
-- Local chat demo
-- Live-room state demo
+- Sidebar calendar card
 - Trends, Discover, and Community pages
 
 ## Partially Implemented
@@ -967,11 +959,13 @@ For a real deployed social network, strengthen the current custom auth with:
 - Email verification
 - Password reset
 - Friend request accept/decline workflow
+- In-app chat / calling
 - Database-backed chat messages
 - Real-time chat/calling
 - Real push notifications
 - File upload/object storage
 - Real video/audio streaming
+- Live-room UI and lifecycle
 - Server-side authorization rules
 
 ---
@@ -983,10 +977,9 @@ For a real deployed social network, strengthen the current custom auth with:
 - Follow relationships use authenticated user records and are persisted in PostgreSQL
 - Reddit/YouTube post content remains externally sourced, but comments, likes, saves, and shares on those items are persisted in PostgreSQL
 - Reddit currently uses the public JSON endpoint and can fall back to curated data if production hosting cannot fetch Reddit reliably
-- Polls and chat are local-only
+- Polls are local-only
 - Follow data filters the database-backed Following feed, but does not yet personalize Reddit or YouTube content
-- Chat is not real-time between users
-- Live room is a state demo, not video/audio streaming
+- Chat and live-room features are currently hidden and tracked as backlog items
 - No server-side user authorization is implemented
 
 ---
@@ -1011,6 +1004,6 @@ For a real deployed social network, strengthen the current custom auth with:
 
 # 18. Conclusion
 
-Bloom & Brew Social is now a deployable social media prototype that combines Reddit-powered community content with core social media interactions. The application demonstrates the required social media platform fundamentals through a frontend demo experience: account creation, profile personalization, feed interactions, content sharing, notifications, chat, following, media editing, streaming concepts, and geolocation.
+Bloom & Brew Social is now a deployable social media prototype that combines Reddit-powered community content with core social media interactions. The application demonstrates the required social media platform fundamentals through a frontend demo experience: account creation, profile personalization, feed interactions, content sharing, notifications, following, media editing, calendar-based content prompts, and geolocation. Chat/calling and streaming are documented backlog items for future implementation.
 
 The current version is suitable for academic demonstration and deployment. For production use, the remaining local/demo features should be replaced with persistent database storage, stronger account security, and real-time infrastructure.

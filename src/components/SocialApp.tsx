@@ -17,7 +17,6 @@ import {
 import { getTrendingKeywords } from "@/lib/trends";
 import type { RedditPost } from "@/types/reddit";
 import type {
-  ChatMessage,
   DemoUser,
   NotificationItem,
   SocialPost,
@@ -37,19 +36,6 @@ const initialNotifications: NotificationItem[] = [
     id: "welcome",
     text: "Welcome back. Your Bloom & Brew feed is ready.",
     createdAt: "Now",
-  },
-];
-
-const initialChatMessages: ChatMessage[] = [
-  {
-    id: "chat-1",
-    from: "them",
-    text: "Do you prefer the blush bouquet board or cafe corner board today?",
-  },
-  {
-    id: "chat-2",
-    from: "me",
-    text: "Blush bouquet first, then coffee pairings.",
   },
 ];
 
@@ -105,10 +91,6 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   const [suggestedFollows, setSuggestedFollows] = useState<SuggestedPerson[]>([]);
   const [notifications, setNotifications] =
     useState<NotificationItem[]>(initialNotifications);
-  const [chatMessages, setChatMessages] =
-    useState<ChatMessage[]>(initialChatMessages);
-  const [chatDraft, setChatDraft] = useState("");
-  const [live, setLive] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [authName, setAuthName] = useState("");
@@ -1198,35 +1180,6 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     );
   }
 
-  function sendChat() {
-    if (!requireAuth("send chat messages")) {
-      return;
-    }
-
-    if (!chatDraft.trim()) {
-      return;
-    }
-
-    setChatMessages((current) => [
-      ...current,
-      {
-        id: crypto.randomUUID(),
-        from: "me",
-        text: chatDraft.trim(),
-      },
-    ]);
-    setChatDraft("");
-  }
-
-  function toggleLive() {
-    if (!requireAuth("start a live room")) {
-      return;
-    }
-
-    setLive((current) => !current);
-    addNotification(live ? "Live room ended." : "Live room started.");
-  }
-
   return (
     <main className="bg-[#fffaf6]">
       <SocialHero
@@ -1345,14 +1298,8 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         </section>
 
         <SocialSidebar
-          chatMessages={chatMessages}
-          chatDraft={chatDraft}
-          live={live}
           trends={trends}
           source={source}
-          onChatDraftChange={setChatDraft}
-          onSendChat={sendChat}
-          onToggleLive={toggleLive}
         />
       </section>
 
