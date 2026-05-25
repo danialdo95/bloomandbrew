@@ -181,6 +181,7 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Unified age sorting across Bloom, Reddit, and YouTube sources
 - Text post composer
 - Media URL attachment for image links and YouTube links
+- Media preview validation before publishing posts with media links
 - Media filter selection
 - Location tagging
 - Like button
@@ -189,6 +190,7 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Save/bookmark state
 - Embedded YouTube videos inside feed posts
 - Composer preview for pasted YouTube watch, Shorts, embed, live, and youtu.be links
+- Composer blocks post publishing when a pasted media link cannot be previewed
 
 ## Current Persistence Split
 - User-created post records are saved to PostgreSQL.

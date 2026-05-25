@@ -1,7 +1,13 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 import { LoadingSpinner } from "@/components/social/LoadingSpinner";
 import { filterClasses, filterStyles } from "@/lib/social";
 import { getYouTubeVideoId, getYouTubeWatchUrl } from "@/lib/youtube-url";
 import type { SocialProfile } from "@/types/social";
+
+type MediaPreviewStatus = "empty" | "checking" | "ready" | "error";
 
 type PostComposerProps = {
   profile: SocialProfile;
@@ -34,8 +40,35 @@ export function PostComposer({
   isPublishing = false,
   isLocating = false,
 }: PostComposerProps) {
-  const youtubeVideoId = getYouTubeVideoId(imageUrl);
+  const mediaUrl = imageUrl.trim();
+  const youtubeVideoId = getYouTubeVideoId(mediaUrl);
   const youtubeUrl = youtubeVideoId ? getYouTubeWatchUrl(youtubeVideoId) : null;
+  const [imagePreviewStatus, setImagePreviewStatus] =
+    useState<MediaPreviewStatus>("empty");
+  const hasMediaUrl = Boolean(mediaUrl);
+  const isYouTubeHost = isYouTubeLink(mediaUrl);
+  const mediaStatus: MediaPreviewStatus = !hasMediaUrl
+    ? "empty"
+    : youtubeVideoId
+      ? "ready"
+      : isYouTubeHost
+        ? "error"
+        : imagePreviewStatus;
+  const mediaCanPublish = mediaStatus === "empty" || mediaStatus === "ready";
+  const mediaStatusMessage = getMediaStatusMessage(mediaStatus, {
+    hasMediaUrl,
+    isYouTubeHost,
+    youtubeVideoId,
+  });
+
+  useEffect(() => {
+    if (!hasMediaUrl || youtubeVideoId || isYouTubeHost) {
+      setImagePreviewStatus(hasMediaUrl && isYouTubeHost ? "error" : "empty");
+      return;
+    }
+
+    setImagePreviewStatus("checking");
+  }, [hasMediaUrl, isYouTubeHost, mediaUrl, youtubeVideoId]);
 
   return (
     <div className="rounded-[6px] border border-[#eadfd4] bg-white p-5 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
@@ -66,6 +99,19 @@ export function PostComposer({
                 placeholder="Paste image or YouTube URL"
                 className="h-10 w-full rounded-[6px] border border-[#eadfd4] bg-white px-3 text-sm font-bold"
               />
+              {mediaStatusMessage ? (
+                <p
+                  className={`mt-2 text-xs font-bold ${
+                    mediaStatus === "error" ? "text-[#c45572]" : "text-[#6f6259]"
+                  }`}
+                  aria-live="polite"
+                >
+                  {mediaStatus === "checking" ? (
+                    <LoadingSpinner className="mr-2 h-3 w-3 align-[-2px]" />
+                  ) : null}
+                  {mediaStatusMessage}
+                </p>
+              ) : null}
             </label>
             <label className="block">
               <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.12em] text-[#8a7d73]">
@@ -123,8 +169,10 @@ export function PostComposer({
             <div className="mt-3 overflow-hidden rounded-[6px] border border-[#eadfd4]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={imageUrl}
+                src={mediaUrl}
                 alt=""
+                onLoad={() => setImagePreviewStatus("ready")}
+                onError={() => setImagePreviewStatus("error")}
                 className={`max-h-64 w-full object-cover ${filterClasses[filter]}`}
                 style={filterStyles[filter] ?? filterStyles.Natural}
               />
@@ -150,15 +198,63 @@ export function PostComposer({
             <button
               type="button"
               onClick={onPublish}
-              disabled={isPublishing}
+              disabled={isPublishing || !mediaCanPublish}
               className="flex min-w-32 items-center justify-center gap-2 rounded-full bg-[#211f1d] px-6 py-3 text-sm font-black text-white transition hover:bg-[#c45572] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isPublishing ? <LoadingSpinner /> : null}
-              {isPublishing ? "Sharing..." : "Share post"}
+              {isPublishing
+                ? "Sharing..."
+                : mediaStatus === "checking"
+                  ? "Checking media..."
+                  : "Share post"}
             </button>
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+function isYouTubeLink(value: string) {
+  if (!value) {
+    return false;
+  }
+
+  try {
+    const hostname = new URL(value).hostname.replace(/^www\./, "");
+    return hostname === "youtube.com" || hostname === "m.youtube.com" || hostname === "youtu.be";
+  } catch {
+    return false;
+  }
+}
+
+function getMediaStatusMessage(
+  status: MediaPreviewStatus,
+  options: {
+    hasMediaUrl: boolean;
+    isYouTubeHost: boolean;
+    youtubeVideoId: string | null;
+  },
+) {
+  if (!options.hasMediaUrl) {
+    return "";
+  }
+
+  if (status === "checking") {
+    return "Checking image preview...";
+  }
+
+  if (status === "ready" && options.youtubeVideoId) {
+    return "YouTube preview is ready.";
+  }
+
+  if (status === "ready") {
+    return "Image preview is ready.";
+  }
+
+  if (options.isYouTubeHost) {
+    return "Use a valid YouTube watch, Shorts, embed, live, or youtu.be link.";
+  }
+
+  return "This media link cannot be previewed. Use a direct image URL or a supported YouTube link.";
 }

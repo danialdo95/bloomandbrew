@@ -9,6 +9,7 @@ Bloom & Brew Social is a Next.js social media prototype for cafe, coffee, floris
 - Reddit public JSON feed with curated fallback content
 - YouTube Data API feed with fallback content
 - Composer media field that supports image URLs and YouTube URLs
+- Media preview validation before a post with media can be shared
 - Embedded YouTube videos for API videos and user-created posts
 - Suggested follows, public profile pages, For You and Following feeds
 - Sidebar calendar for cafe/floral content prompts
@@ -94,6 +95,7 @@ The post composer's media field accepts:
 - `youtu.be`, `/embed`, and `/live` YouTube URLs
 
 YouTube URLs are parsed in `src/lib/youtube-url.ts` and rendered as embedded videos in the feed.
+The composer checks that a pasted media link can preview before enabling post sharing. Unsupported YouTube URLs or broken image links are blocked with an inline message.
 
 ## Scripts
 
