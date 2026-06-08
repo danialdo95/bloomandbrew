@@ -77,6 +77,8 @@ function getShareNotification(method: PostShareMethod) {
   const labels: Record<PostShareMethod, string> = {
     native: "Post shared through your device share menu.",
     copy: "Post link copied and share activity recorded.",
+    facebook: "Post opened for Facebook sharing.",
+    messenger: "Post opened for Messenger sharing.",
     email: "Post prepared for email sharing.",
     whatsapp: "Post opened for WhatsApp sharing.",
   };
