@@ -11,6 +11,7 @@ const navItems = [
   { href: "/discover", label: "Discover" },
   { href: "/trends", label: "Trends" },
   { href: "/community", label: "Community" },
+  { href: "/admin", label: "Admin" },
 ];
 
 type NotificationEvent = CustomEvent<NotificationItem[]>;
