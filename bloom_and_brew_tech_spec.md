@@ -109,12 +109,14 @@ Browser UI (Next.js App Router)
         |
         |-- Trend analysis: src/lib/trends.ts
 
-        |-- Planned route: /admin
-        |      |-- user management
-        |      |-- post moderation and engagement review
-        |      |-- trend management
-        |      |-- AI-style content suggestions
-        |      |-- Reddit/YouTube integration status
+        |-- Next.js Routes: /admin/*
+        |      |-- independent admin login page
+        |      |-- protected admin dashboard shell
+        |      |-- user management view
+        |      |-- post moderation and engagement review view
+        |      |-- trend management view
+        |      |-- AI-style content suggestions view
+        |      |-- Reddit/YouTube integration status view
 ```
 
 ## Data Flow
@@ -133,7 +135,7 @@ Reddit/YouTube post IDs ─→ /api/external-posts/* ─→ Prisma ─→ Postgr
 Remaining demo-only state:
 polls ─→ localStorage or React state
 
-Planned admin insight flow:
+Admin insight flow:
 Reddit + YouTube + Bloom posts ─→ trend analysis ─→ admin dashboard
 Admin dashboard ─→ content suggestions, moderation actions, integration status
 ```
@@ -157,7 +159,7 @@ Admin dashboard ─→ content suggestions, moderation actions, integration stat
 | State Management | React Hooks |
 | Persistence | PostgreSQL for users, sessions, posts, comments, likes, saves, shares, notifications, external-post interactions, and follows; localStorage/React state for remaining demo features |
 | Charts/Analytics | Custom keyword and subreddit analysis |
-| Planned Insight Layer | Trend-based content suggestions and admin analytics |
+| Insight Layer | Trend-based content suggestions, admin analytics, and protected admin dashboard views |
 
 ---
 
@@ -405,21 +407,27 @@ The Community page demonstrates polls and community participation.
 
 ---
 
-# 6.14 Planned Admin Insights Dashboard
+# 6.14 Admin Insights Dashboard
 
 ## Description
-The next feature phase will introduce an admin-facing dashboard for managing the new value-added services proposed for the emerging-technology assignment. The dashboard will connect existing platform data with trend analytics and AI-style content support.
+The current feature phase introduces an admin-facing dashboard for managing the new value-added services proposed for the emerging-technology assignment. The dashboard connects existing platform data with trend analytics and AI-style content support.
 
-## Proposed Route
+## Routes
 
 ```http
 GET /admin
+GET /admin/users
+GET /admin/posts
+GET /admin/trends
+GET /admin/ai-suggestions
+GET /admin/integrations
+GET /admin/login
 ```
 
 ## Purpose
 The dashboard will help platform managers monitor users, posts, trends, integrations, and recommendation services from one place. It will also demonstrate how analytics and intelligent content support can enrich an existing social media ecosystem.
 
-## Planned Dashboard Sections
+## Implemented Dashboard Sections
 
 | Section | Purpose |
 |---|---|
@@ -429,15 +437,27 @@ The dashboard will help platform managers monitor users, posts, trends, integrat
 | AI Suggestions | Generate content ideas, hashtags, and creator prompts from trending topics |
 | Integration Management | Show Reddit and YouTube source status, fallback behavior, and API configuration state |
 
+## Implemented Admin Access Controls
+
+| Control | Current Implementation |
+|---|---|
+| Independent admin login | `/admin/login` authenticates admins through `/api/admin/login` |
+| Dashboard protection | `/admin` dashboard routes perform server-side session and admin checks |
+| Admin allowlist | `ADMIN_EMAILS` controls which existing user accounts can access admin pages |
+| Seeded admin account | `admin@bloombrew.com` is created by the Prisma seed script for local testing |
+| Hidden admin navigation | The main navbar only shows the Admin link to authenticated admin users |
+| Non-admin redirect | Signed-in non-admin users are redirected away from `/admin/login` and protected dashboard pages |
+| Admin logout | Admin dashboard includes a sign-out action using the existing session logout API |
+
 ## Management Actions
 
-| Module | Planned Actions |
+| Module | Current Status |
 |---|---|
-| Users | View users, inspect profiles, edit user information, disable/reactivate users |
-| Posts | View posts, filter by keyword/author/community, delete inappropriate posts, inspect engagement |
-| Trends | View keyword frequency, highlight featured trends, connect trends to suggested content ideas |
-| AI Suggestions | Generate, approve, dismiss, or reuse suggested captions/topics/hashtags |
-| Integrations | Show API health, source availability, fallback mode, and last fetch status |
+| Users | View users and account metrics implemented; edit user information and disable/reactivate actions remain backlog |
+| Posts | View posts and engagement metrics implemented; filtering and moderation/delete controls remain backlog |
+| Trends | View trend signals implemented; featured trend and approval workflows remain backlog |
+| AI Suggestions | Rule-style suggestion view implemented; approve, dismiss, reuse, and persistence workflows remain backlog |
+| Integrations | Integration status view implemented; richer API health/fallback diagnostics remain backlog |
 
 ## Emerging Technology Value
 This module uses trend analytics, recommendation logic, and external API integration to show how emerging technologies can improve social media platforms. Instead of only displaying content, the system will help users and admins interpret content patterns and turn them into useful services.
@@ -496,10 +516,10 @@ The first version can use rule-based recommendation logic from existing trend da
 | FR-12 | System shall support geolocation tagging | Implemented with browser API |
 | FR-13 | System shall be accessible online | Implemented through Vercel deployment |
 | FR-14 | System shall support responsive design | Implemented with Tailwind responsive layouts |
-| FR-15 | Admins shall manage users, posts, trends, and integrations | Planned for Admin Insights Dashboard |
-| FR-16 | System shall generate content suggestions from trend data | Planned for AI-assisted suggestion module |
-| FR-17 | Admins shall monitor external API and fallback status | Planned for Integration Management |
-| FR-18 | Admins shall moderate or remove inappropriate Bloom posts | Planned for Post Management |
+| FR-15 | Admins shall manage users, posts, trends, and integrations | Partially implemented through protected admin dashboard pages; action controls remain backlog |
+| FR-16 | System shall generate content suggestions from trend data | Partially implemented through the AI Suggestions admin view; approval/reuse workflows remain backlog |
+| FR-17 | Admins shall monitor external API and fallback status | Partially implemented through the Integration Management admin view |
+| FR-18 | Admins shall moderate or remove inappropriate Bloom posts | Backlog; post management view exists but moderation action controls are not complete |
 
 ---
 
@@ -514,7 +534,7 @@ The first version can use rule-based recommendation logic from existing trend da
 | Deployability | Online hosting | Vercel deployment using the Next.js framework preset |
 | Maintainability | Clear file separation | Social components, lib utilities, Prisma config, types, and app routes are separated |
 | Explainability | Insight features should be understandable | Planned suggestions should show which trend keyword or source influenced the recommendation |
-| Manageability | Added services should be controllable | Planned admin dashboard will expose user, post, trend, AI suggestion, and integration management |
+| Manageability | Added services should be controllable | Protected admin dashboard exposes user, post, trend, AI suggestion, and integration management views; action controls remain the next milestone |
 
 ---
 
@@ -794,9 +814,17 @@ These routes load and create database-backed in-app notifications for the authen
 
 ---
 
-## 10.9 Planned Admin Management API Routes
+## 10.9 Admin Management API Routes
 
-### Proposed Endpoints
+### Implemented Endpoint
+
+```http
+POST /api/admin/login
+```
+
+This route validates an existing user account with email and password, checks whether the account email is present in the server-side `ADMIN_EMAILS` allowlist, and creates the existing HTTP-only session cookie only for authorized admin users.
+
+### Planned Management Endpoints
 
 ```http
 GET /api/admin/users
@@ -809,7 +837,7 @@ POST /api/admin/suggestions
 ```
 
 ### Description
-These routes will support the Admin Insights Dashboard. They should return aggregated user, post, engagement, trend, and integration information for management workflows. Access should be restricted to authorized admin users once role-based authorization is added.
+These routes will support the Admin Insights Dashboard. They should return aggregated user, post, engagement, trend, and integration information for management workflows. Dashboard page access is currently restricted to authorized admin users through server-side session checks and the `ADMIN_EMAILS` allowlist. Dedicated management API routes still need the same admin authorization checks before mutation actions are added.
 
 ### Planned Response Data
 
@@ -869,7 +897,7 @@ These routes will support the Admin Insights Dashboard. They should return aggre
 
 ---
 
-# 11.5 Planned Admin Page
+# 11.5 Admin Dashboard Pages
 
 ## Components
 - Admin overview statistics
@@ -878,9 +906,12 @@ These routes will support the Admin Insights Dashboard. They should return aggre
 - Trend keyword panel
 - AI-style content suggestion panel
 - External integration status cards
+- Independent admin login form
+- Admin sidebar navigation
+- Admin sign-out action
 
-## Proposed Layout
-The `/admin` page should use a compact dashboard layout with tabs or segmented navigation for `Users`, `Posts`, `Trends`, `AI Suggestions`, and `Integrations`. The UI should prioritize scanning, filtering, and management actions rather than marketing-style presentation.
+## Implemented Layout
+The `/admin` route uses a compact dashboard layout with sidebar navigation for `Users`, `Posts`, `Trends`, `AI Suggestions`, and `Integrations`. Each menu item has its own page instead of placing every management module into one long dashboard page. The UI prioritizes scanning, metrics, tables, and management context rather than marketing-style presentation.
 
 ---
 
@@ -890,6 +921,9 @@ The `/admin` page should use a compact dashboard layout with tabs or segmented n
 src/
   app/
     api/
+      admin/
+        login/
+          route.ts
       auth/
         login/
           route.ts
@@ -934,6 +968,28 @@ src/
           route.ts
       youtube/
         route.ts
+    admin/
+      (dashboard)/
+        ai-suggestions/
+          page.tsx
+        integrations/
+          page.tsx
+        posts/
+          page.tsx
+        trends/
+          page.tsx
+        users/
+          page.tsx
+        layout.tsx
+        page.tsx
+      _components/
+        AdminDashboardFrame.tsx
+        AdminPageHeader.tsx
+      _lib/
+        admin-data.ts
+      login/
+        AdminLoginForm.tsx
+        page.tsx
     community/
       page.tsx
     discover/
@@ -1056,6 +1112,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - PostgreSQL-backed saves/bookmarks for database posts
 - PostgreSQL-backed comments, likes, and saves for Reddit/YouTube external posts
 - PostgreSQL-backed share counters for Bloom and external posts
+- Themed share modal with copy link, Facebook, Messenger, WhatsApp, email, and device share sheet options
 - PostgreSQL-backed follow/unfollow relationships
 - Following feed tab for followed creators and the current user's posts
 - Follower/following counts in the profile UI
@@ -1088,27 +1145,42 @@ For a real deployed social network, strengthen the current custom auth with:
 - Age-sorted combined feed across Bloom, Reddit, and YouTube posts
 - Sidebar calendar card
 - Trends, Discover, and Community pages
+- Admin dashboard shell at `/admin`
+- Separate admin management pages for users, posts, trends, AI suggestions, and integrations
+- Independent admin login page at `/admin/login`
+- `POST /api/admin/login`
+- Server-side admin dashboard route protection
+- `ADMIN_EMAILS` admin allowlist
+- Seeded default admin account for local testing
+- Admin navbar link hidden from non-admin users
+- Admin dashboard logout action
 
 ## Partially Implemented
 - Feed persistence: user-created posts persist in PostgreSQL, while Reddit/YouTube content remains externally sourced and is mirrored only for interaction persistence
 - YouTube persistence: YouTube video posts are fetched from the API and embedded in the feed, while user interactions are saved locally in PostgreSQL
 - Follow personalization: follow records persist in PostgreSQL and power a Following feed, but external Reddit/YouTube posts are not personalized by follows
-- User identity: real accounts exist, but there is no email verification, password reset, OAuth, or role-based authorization yet
+- User identity: real accounts exist, but there is no email verification, password reset, OAuth, or advanced account security yet
+- Authorization: admin allowlist protection exists, but there is no database-backed role or status field yet
 - Notifications: in-app notifications are database-backed, with browser permission request but no push service worker
 - Media editing: CSS filters only
 - Geolocation: coordinate tagging only, no map/location search
 - Reddit source: public JSON endpoint with fallback data; OAuth/API credentials are currently deferred
 - Trend analysis: keyword extraction exists, but it is not yet connected to admin-managed content suggestions
+- User management dashboard: user metrics can be viewed, but disable/reactivate and edit controls are not complete
+- Post management dashboard: post and engagement data can be viewed, but moderation actions and search/filter controls are not complete
+- Trend management dashboard: trend signals can be viewed, but approval/featured workflows are not complete
+- AI-assisted content suggestion workflow: suggestion view exists, but approval, dismissal, reuse, and persistence are not complete
+- Integration management dashboard: integration status view exists, but richer health/fallback diagnostics are not complete
+- Share analytics: share counters persist, but selected platform/method is not yet persisted for analytics
 
 ## Not Yet Implemented
-- Admin Insights Dashboard
-- User management dashboard
-- Post management and moderation dashboard
-- Trend management dashboard
-- AI-assisted content suggestion workflow
-- Integration management dashboard
-- Admin-only API routes
-- Role-based admin authorization
+- Admin user disable/reactivate controls
+- Admin user edit controls
+- Admin post moderation/delete controls in the dashboard UI
+- Admin search and filter controls for users and posts
+- Admin-only management API mutation routes
+- Database-backed admin roles and account status fields
+- Share analytics by platform/method
 - OAuth login
 - Email verification
 - Password reset
@@ -1120,7 +1192,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - File upload/object storage
 - Real video/audio streaming
 - Live-room UI and lifecycle
-- Server-side authorization rules
+- Comprehensive server-side authorization rules for every mutation route
 
 ---
 
@@ -1134,20 +1206,22 @@ For a real deployed social network, strengthen the current custom auth with:
 - Polls are local-only
 - Follow data filters the database-backed Following feed, but does not yet personalize Reddit or YouTube content
 - Chat and live-room features are currently hidden and tracked as backlog items
-- No server-side user authorization is implemented
-- No admin role or management dashboard is currently implemented
+- Admin access is controlled by an `ADMIN_EMAILS` allowlist instead of a database-backed role field
+- Admin management pages exist, but several action controls are still backlog
 - Trend keywords are displayed, but there is no approval workflow or content suggestion management yet
 
 ---
 
 # 17. Future Improvements
 
-- Build `/admin` as the next feature, starting with user and post management
-- Add admin-only roles and authorization checks
-- Add trend management using the existing keyword analysis utility
-- Add AI-style content suggestion cards based on trending topics
-- Add integration health cards for Reddit and YouTube
-- Add moderation actions for posts and user accounts
+- Add admin user disable/reactivate and edit controls
+- Add admin post moderation/delete controls
+- Add admin-only management API routes with authorization checks
+- Add database-backed admin roles and account status fields
+- Add trend approval/featured workflows using the existing keyword analysis utility
+- Add AI-style suggestion approval, dismissal, and reuse workflows
+- Add richer integration health cards for Reddit and YouTube
+- Add share analytics by platform/method
 - OAuth login with Auth.js, Supabase Auth, or another provider
 - Optional Reddit OAuth/API credentials if public Reddit JSON is blocked in production
 - Add followed-first ranking to the For You feed
@@ -1168,16 +1242,18 @@ For a real deployed social network, strengthen the current custom auth with:
 
 The next development branch should focus on the management functionality required by the new assignment question.
 
-## Priority 1: Admin Dashboard Shell
-- Create `/admin`
-- Add dashboard navigation for `Users`, `Posts`, `Trends`, `AI Suggestions`, and `Integrations`
-- Add summary cards for total users, total posts, total comments, total follows, and external source status
+## Priority 1: Admin User and Post Management Actions
+- Add user disable/reactivate controls
+- Add user profile edit controls for admin workflows
+- Add post delete/moderation controls
+- Add search/filter controls for users and posts
+- Protect management mutations with admin-only API authorization
 
-## Priority 2: User and Post Management
-- Add user management table from PostgreSQL
-- Add post management table from PostgreSQL
-- Include engagement counts for likes, comments, saves, and shares
-- Add moderation actions such as delete post and disable/reactivate user
+## Priority 2: Database-Backed Admin Roles
+- Add a user role or admin flag to Prisma
+- Add account status for active/disabled users
+- Migrate admin access from `ADMIN_EMAILS` to database-backed authorization
+- Keep `ADMIN_EMAILS` only as a local bootstrap option if needed
 
 ## Priority 3: Trend and AI Suggestion Management
 - Reuse `src/lib/trends.ts` to generate dashboard trend keywords
