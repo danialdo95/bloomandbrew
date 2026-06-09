@@ -13,6 +13,8 @@ const navItems = [
   { href: "/community", label: "Community" },
 ];
 
+const adminNavItem = { href: "/admin", label: "Admin" };
+
 type NotificationEvent = CustomEvent<NotificationItem[]>;
 
 function formatNotificationTime(value: string) {
@@ -34,13 +36,18 @@ function formatNotificationTime(value: string) {
   });
 }
 
-export function Navbar() {
+type NavbarProps = {
+  showAdminLink: boolean;
+};
+
+export function Navbar({ showAdminLink }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [browserNotificationStatus, setBrowserNotificationStatus] =
     useState("Browser alerts");
   const [isRequestingNotifications, setIsRequestingNotifications] = useState(false);
+  const visibleNavItems = showAdminLink ? [...navItems, adminNavItem] : navItems;
 
   useEffect(() => {
     function handleNotifications(event: Event) {
@@ -113,7 +120,7 @@ export function Navbar() {
         </Link>
 
         <div className="hidden items-center justify-center gap-6 md:flex">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -198,7 +205,7 @@ export function Navbar() {
         {menuOpen ? (
           <div className="absolute left-4 right-4 top-[calc(100%+0.5rem)] rounded-[6px] border border-[#eadfd4] bg-white p-3 shadow-[0_16px_48px_rgba(33,31,29,0.18)] md:hidden">
             <div className="grid gap-1">
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}

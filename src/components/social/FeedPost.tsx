@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { LoadingSpinner } from "@/components/social/LoadingSpinner";
 import { filterClasses, filterStyles, getTimeLabel } from "@/lib/social";
-import type { SocialPost } from "@/types/social";
+import type { PostShareMethod, SocialPost } from "@/types/social";
 
 export type FeedPostPendingAction =
   | "like"
@@ -21,7 +22,7 @@ type FeedPostProps = {
   pendingAction?: FeedPostPendingAction;
   canDelete?: boolean;
   onLike: (postId: string) => void;
-  onShare: (postId: string) => void;
+  onShare: (postId: string, method?: PostShareMethod) => void;
   onBookmark: (postId: string) => void;
   onDelete: (postId: string) => void;
   onCommentDraftChange: (postId: string, value: string) => void;
@@ -41,6 +42,7 @@ export function FeedPost({
   onAddComment,
 }: FeedPostProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const userCommentCount = post.comments.filter((comment) => !comment.system).length;
   const commentCount =
     post.source === "reddit" || post.source === "youtube"
@@ -49,6 +51,95 @@ export function FeedPost({
   const isBloomPost = post.source === "bloom";
   const profileHref = `/users/${post.username}`;
   const isBusy = Boolean(pendingAction);
+  const shareUrl = getShareUrl(post);
+  const shareText = `${post.content}\n\n${shareUrl}`;
+
+  async function copyShareLink() {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      await navigator.clipboard.writeText(shareUrl);
+      return;
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = shareUrl;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+  }
+
+  async function handleShare(method: PostShareMethod) {
+    if (isBusy) {
+      return;
+    }
+
+    setShareModalOpen(false);
+
+    if (method === "native") {
+      if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+        try {
+          await navigator.share({
+            title: "Bloom & Brew Social",
+            text: post.content,
+            url: shareUrl,
+          });
+          onShare(post.id, method);
+        } catch {
+          // User cancelled the native share sheet.
+        }
+      } else {
+        await copyShareLink();
+        onShare(post.id, "copy");
+      }
+      return;
+    }
+
+    if (method === "copy") {
+      await copyShareLink();
+      onShare(post.id, method);
+      return;
+    }
+
+    if (method === "email") {
+      window.location.href = `mailto:?subject=${encodeURIComponent(
+        "Bloom & Brew Social post",
+      )}&body=${encodeURIComponent(shareText)}`;
+      onShare(post.id, method);
+      return;
+    }
+
+    if (method === "facebook") {
+      window.open(
+        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+      onShare(post.id, method);
+      return;
+    }
+
+    if (method === "messenger") {
+      window.open(
+        `https://www.facebook.com/dialog/send?link=${encodeURIComponent(
+          shareUrl,
+        )}&redirect_uri=${encodeURIComponent(shareUrl)}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+      onShare(post.id, method);
+      return;
+    }
+
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(shareText)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+    onShare(post.id, method);
+  }
 
   return (
     <article className="rounded-[6px] border border-[#eadfd4] bg-white shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
@@ -182,7 +273,7 @@ export function FeedPost({
         </button>
         <button
           type="button"
-          onClick={() => onShare(post.id)}
+          onClick={() => setShareModalOpen(true)}
           disabled={isBusy}
           className="flex items-center justify-center gap-2 px-3 py-3 transition hover:bg-[#fff8f2] disabled:cursor-not-allowed disabled:opacity-60"
         >
@@ -206,6 +297,74 @@ export function FeedPost({
           {commentCount} {commentCount === 1 ? "comment" : "comments"}
         </span>
       </div>
+
+      {shareModalOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#211f1d]/45 px-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Share post"
+          onClick={() => setShareModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-2xl rounded-[6px] border border-[#eadfd4] bg-white px-5 py-6 shadow-[0_24px_80px_rgba(64,45,35,0.28)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#c45572]">
+                  Share post
+                </p>
+                <h2 className="mt-1 text-xl font-black text-[#211f1d]">
+                  Send this Bloom & Brew moment
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShareModalOpen(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-[#eadfd4] bg-[#fff8f2] text-lg font-black text-[#211f1d] transition hover:border-[#c45572]"
+                aria-label="Close share dialog"
+              >
+                ×
+              </button>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-5">
+              <ShareModalButton
+                label="Copy link"
+                icon={<LinkIcon />}
+                onClick={() => void handleShare("copy")}
+              />
+              <ShareModalButton
+                label="Facebook"
+                icon={<FacebookIcon />}
+                onClick={() => void handleShare("facebook")}
+              />
+              <ShareModalButton
+                label="Messenger"
+                icon={<MessengerIcon />}
+                onClick={() => void handleShare("messenger")}
+              />
+              <ShareModalButton
+                label="WhatsApp"
+                icon={<WhatsAppIcon />}
+                onClick={() => void handleShare("whatsapp")}
+              />
+              <ShareModalButton
+                label="Email"
+                icon={<EmailIcon />}
+                onClick={() => void handleShare("email")}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleShare("native")}
+              className="mt-6 w-full rounded-[6px] border border-[#eadfd4] bg-[#fff8f2] px-4 py-3 text-sm font-black text-[#211f1d] transition hover:border-[#c45572] hover:bg-white"
+            >
+              Use device share sheet
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="space-y-3 p-5">
         {post.comments.slice(-3).map((comment) => (
@@ -235,4 +394,137 @@ export function FeedPost({
       </div>
     </article>
   );
+}
+
+function ShareModalButton({
+  label,
+  icon,
+  onClick,
+}: {
+  label: string;
+  icon: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex flex-col items-center gap-2 text-[#211f1d]"
+    >
+      <span className="flex h-16 w-16 items-center justify-center rounded-full border border-[#eadfd4] bg-[#f7c6cf] text-[#211f1d] shadow-[0_8px_24px_rgba(64,45,35,0.08)] transition group-hover:border-[#c45572] group-hover:bg-[#fff176] sm:h-20 sm:w-20 [&>svg]:h-8 [&>svg]:w-8 [&>svg]:shrink-0">
+        {icon}
+      </span>
+      <span className="text-sm font-black sm:text-base">{label}</span>
+    </button>
+  );
+}
+
+function LinkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M10.6 13.4a1.5 1.5 0 0 1 0-2.1l2.6-2.6a3.1 3.1 0 0 1 4.4 4.4l-2 2"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.9"
+      />
+      <path
+        d="M13.4 10.6a1.5 1.5 0 0 1 0 2.1l-2.6 2.6a3.1 3.1 0 0 1-4.4-4.4l2-2"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.9"
+      />
+    </svg>
+  );
+}
+
+function FacebookIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M13.1 19v-6h2l.4-2.6h-2.4V8.7c0-.7.3-1.2 1.3-1.2h1.2V5.1c-.6-.1-1.2-.2-1.9-.2-2.2 0-3.7 1.3-3.7 3.7v1.8H7.7V13H10v6h3.1Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function MessengerIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M4 11.7C4 7.5 7.5 4.3 12 4.3s8 3.2 8 7.4-3.5 7.4-8 7.4c-.8 0-1.6-.1-2.3-.4L6.5 20v-3.1A7.2 7.2 0 0 1 4 11.7Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="m7.6 13.5 2.7-2.9 2.1 2 3.9-2.7-3 3.4-2.1-2.1-3.6 2.3Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function WhatsAppIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M5.3 19.1 6.4 16A7.7 7.7 0 1 1 9 18.4l-3.7.7Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M9.1 8.2c-.2-.3-.3-.3-.6-.3h-.5c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.3s1 2.7 1.1 2.9c.2.2 2 3.1 4.8 4.1 2.4.8 2.8.7 3.4.6.5 0 1.6-.6 1.9-1.3.2-.6.2-1.2.1-1.3 0-.1-.3-.2-.6-.4l-1.7-.8c-.3-.1-.5-.2-.7.2-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.5-1.6-1-.9-1.6-1.9-1.8-2.2-.2-.3 0-.5.1-.6l.5-.6c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5l-.8-1.7Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function EmailIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect
+        x="4.5"
+        y="6.5"
+        width="15"
+        height="11"
+        rx="1.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.9"
+      />
+      <path
+        d="m5.3 7.4 6.7 5.4 6.7-5.4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.9"
+      />
+    </svg>
+  );
+}
+
+function getShareUrl(post: SocialPost) {
+  if (post.youtubeUrl) {
+    return post.youtubeUrl;
+  }
+
+  if (post.externalUrl) {
+    return post.externalUrl;
+  }
+
+  if (typeof window === "undefined") {
+    return `/users/${post.username}`;
+  }
+
+  return `${window.location.origin}/users/${post.username}#${post.id}`;
 }

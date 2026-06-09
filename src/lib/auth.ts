@@ -82,6 +82,15 @@ export function toAuthUser(user: {
   };
 }
 
+export function isAdminUser(user: { email: string } | null | undefined) {
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+
+  return Boolean(user?.email && adminEmails.includes(user.email.toLowerCase()));
+}
+
 export async function createSession(userId: string) {
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);

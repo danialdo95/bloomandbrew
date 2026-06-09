@@ -1,7 +1,37 @@
 import "dotenv/config";
+import { randomBytes, scryptSync } from "crypto";
 import { prisma } from "../src/lib/prisma";
 
+function hashSeedPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const hash = scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${hash}`;
+}
+
 async function main() {
+  const adminPasswordHash = hashSeedPassword("password");
+
+  await prisma.user.upsert({
+    where: { email: "admin@bloombrew.com" },
+    update: {
+      passwordHash: adminPasswordHash,
+      name: "Bloom & Brew Admin",
+      username: "bloombrewadmin",
+      avatar: "BA",
+      bio: "Admin account for managing Bloom & Brew Social.",
+      location: "Kuala Lumpur",
+    },
+    create: {
+      email: "admin@bloombrew.com",
+      name: "Bloom & Brew Admin",
+      username: "bloombrewadmin",
+      passwordHash: adminPasswordHash,
+      avatar: "BA",
+      bio: "Admin account for managing Bloom & Brew Social.",
+      location: "Kuala Lumpur",
+    },
+  });
+
   const petalNotes = await prisma.user.upsert({
     where: { email: "petalnotes@bloomandbrew.local" },
     update: {},

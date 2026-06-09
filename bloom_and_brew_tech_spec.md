@@ -37,6 +37,18 @@ The application demonstrates:
 - Create a visually engaging BloomThis-inspired interface
 - Deploy the application online using Vercel
 
+## Next Assignment Enhancement Objective
+For the next assignment, the project will be expanded from a social media prototype into an emerging-technology enhanced social platform. The proposed enhancement is an **Admin Insights Dashboard** that uses trend analytics, recommendation logic, and external social media integrations to help users and platform managers understand community behavior and manage the added services.
+
+This enhancement directly supports the assignment objective: analyze the impact of new and emerging technologies in the social media ecosystem, then identify opportunities to add value through new services or richer data.
+
+The next implementation phase should focus on:
+- Admin and platform management functionality
+- Trend and content insight management
+- AI-style content suggestion workflows
+- Integration status and external-source management
+- Moderation and operational visibility for users, posts, and engagement
+
 ---
 
 # 3. Target Users
@@ -46,6 +58,8 @@ The application demonstrates:
 | Cafe Enthusiasts | Users interested in coffee culture, cafe spaces, and latte art |
 | Florist Enthusiasts | Users interested in flowers, bouquets, and plant styling |
 | Social Media Users | Users seeking aesthetic inspiration and community interaction |
+| Creators | Users who want topic ideas, content prompts, and trend-aware posting support |
+| Platform Admins | Users who manage accounts, posts, integrations, trends, and recommendation services |
 | Students/Lecturers | Academic demonstration and evaluation users |
 
 ---
@@ -94,6 +108,13 @@ Browser UI (Next.js App Router)
         |      |-- public creator profile page
         |
         |-- Trend analysis: src/lib/trends.ts
+
+        |-- Planned route: /admin
+        |      |-- user management
+        |      |-- post moderation and engagement review
+        |      |-- trend management
+        |      |-- AI-style content suggestions
+        |      |-- Reddit/YouTube integration status
 ```
 
 ## Data Flow
@@ -111,6 +132,10 @@ Reddit/YouTube post IDs ─→ /api/external-posts/* ─→ Prisma ─→ Postgr
 
 Remaining demo-only state:
 polls ─→ localStorage or React state
+
+Planned admin insight flow:
+Reddit + YouTube + Bloom posts ─→ trend analysis ─→ admin dashboard
+Admin dashboard ─→ content suggestions, moderation actions, integration status
 ```
 
 ---
@@ -132,6 +157,7 @@ polls ─→ localStorage or React state
 | State Management | React Hooks |
 | Persistence | PostgreSQL for users, sessions, posts, comments, likes, saves, shares, notifications, external-post interactions, and follows; localStorage/React state for remaining demo features |
 | Charts/Analytics | Custom keyword and subreddit analysis |
+| Planned Insight Layer | Trend-based content suggestions and admin analytics |
 
 ---
 
@@ -379,6 +405,62 @@ The Community page demonstrates polls and community participation.
 
 ---
 
+# 6.14 Planned Admin Insights Dashboard
+
+## Description
+The next feature phase will introduce an admin-facing dashboard for managing the new value-added services proposed for the emerging-technology assignment. The dashboard will connect existing platform data with trend analytics and AI-style content support.
+
+## Proposed Route
+
+```http
+GET /admin
+```
+
+## Purpose
+The dashboard will help platform managers monitor users, posts, trends, integrations, and recommendation services from one place. It will also demonstrate how analytics and intelligent content support can enrich an existing social media ecosystem.
+
+## Planned Dashboard Sections
+
+| Section | Purpose |
+|---|---|
+| User Management | View registered users, profile details, follower/following counts, and post counts |
+| Post Management | Review Bloom & Brew posts, engagement counts, author details, and moderation actions |
+| Trend Management | Display trending keywords from Bloom, Reddit, and YouTube content |
+| AI Suggestions | Generate content ideas, hashtags, and creator prompts from trending topics |
+| Integration Management | Show Reddit and YouTube source status, fallback behavior, and API configuration state |
+
+## Management Actions
+
+| Module | Planned Actions |
+|---|---|
+| Users | View users, inspect profiles, edit user information, disable/reactivate users |
+| Posts | View posts, filter by keyword/author/community, delete inappropriate posts, inspect engagement |
+| Trends | View keyword frequency, highlight featured trends, connect trends to suggested content ideas |
+| AI Suggestions | Generate, approve, dismiss, or reuse suggested captions/topics/hashtags |
+| Integrations | Show API health, source availability, fallback mode, and last fetch status |
+
+## Emerging Technology Value
+This module uses trend analytics, recommendation logic, and external API integration to show how emerging technologies can improve social media platforms. Instead of only displaying content, the system will help users and admins interpret content patterns and turn them into useful services.
+
+---
+
+# 6.15 Planned AI-Assisted Content Suggestions
+
+## Description
+The app already analyzes trending keywords through `src/lib/trends.ts`. The next step is to convert those signals into practical content suggestions for creators and admins.
+
+## Planned Suggestions
+- Post topic ideas based on trending keywords
+- Suggested cafe/florist hashtags
+- Short creator prompts for the post composer
+- Trend summaries for admin review
+- Suggested content categories such as coffee, bouquet, plants, events, and cafe ambience
+
+## Prototype Scope
+The first version can use rule-based recommendation logic from existing trend data. A later version can connect to a generative AI API for richer summaries, captions, and moderation assistance.
+
+---
+
 # 7. Social Media Platform Fundamentals Coverage
 
 | No. | Fundamental | Current Implementation |
@@ -414,6 +496,10 @@ The Community page demonstrates polls and community participation.
 | FR-12 | System shall support geolocation tagging | Implemented with browser API |
 | FR-13 | System shall be accessible online | Implemented through Vercel deployment |
 | FR-14 | System shall support responsive design | Implemented with Tailwind responsive layouts |
+| FR-15 | Admins shall manage users, posts, trends, and integrations | Planned for Admin Insights Dashboard |
+| FR-16 | System shall generate content suggestions from trend data | Planned for AI-assisted suggestion module |
+| FR-17 | Admins shall monitor external API and fallback status | Planned for Integration Management |
+| FR-18 | Admins shall moderate or remove inappropriate Bloom posts | Planned for Post Management |
 
 ---
 
@@ -427,6 +513,8 @@ The Community page demonstrates polls and community participation.
 | Usability | Easy-to-use interface | Modal auth, social feed, cards, clear actions |
 | Deployability | Online hosting | Vercel deployment using the Next.js framework preset |
 | Maintainability | Clear file separation | Social components, lib utilities, Prisma config, types, and app routes are separated |
+| Explainability | Insight features should be understandable | Planned suggestions should show which trend keyword or source influenced the recommendation |
+| Manageability | Added services should be controllable | Planned admin dashboard will expose user, post, trend, AI suggestion, and integration management |
 
 ---
 
@@ -706,6 +794,35 @@ These routes load and create database-backed in-app notifications for the authen
 
 ---
 
+## 10.9 Planned Admin Management API Routes
+
+### Proposed Endpoints
+
+```http
+GET /api/admin/users
+PATCH /api/admin/users/[id]
+GET /api/admin/posts
+DELETE /api/admin/posts/[id]
+GET /api/admin/trends
+GET /api/admin/integrations
+POST /api/admin/suggestions
+```
+
+### Description
+These routes will support the Admin Insights Dashboard. They should return aggregated user, post, engagement, trend, and integration information for management workflows. Access should be restricted to authorized admin users once role-based authorization is added.
+
+### Planned Response Data
+
+| Endpoint | Data |
+|---|---|
+| `/api/admin/users` | Users, profiles, post counts, follower counts, following counts, account status |
+| `/api/admin/posts` | Bloom posts, authors, comments, likes, saves, shares, created dates |
+| `/api/admin/trends` | Trending keywords, source counts, related posts |
+| `/api/admin/integrations` | Reddit status, YouTube status, fallback status, last fetch result |
+| `/api/admin/suggestions` | Content ideas, hashtag suggestions, trend summaries |
+
+---
+
 # 11. User Interface Design
 
 # 11.1 Homepage / Feed
@@ -749,6 +866,21 @@ These routes load and create database-backed in-app notifications for the authen
 - Poll cards
 - Local voting
 - Percentage display
+
+---
+
+# 11.5 Planned Admin Page
+
+## Components
+- Admin overview statistics
+- User management table
+- Post management and moderation table
+- Trend keyword panel
+- AI-style content suggestion panel
+- External integration status cards
+
+## Proposed Layout
+The `/admin` page should use a compact dashboard layout with tabs or segmented navigation for `Users`, `Posts`, `Trends`, `AI Suggestions`, and `Integrations`. The UI should prioritize scanning, filtering, and management actions rather than marketing-style presentation.
 
 ---
 
@@ -966,8 +1098,17 @@ For a real deployed social network, strengthen the current custom auth with:
 - Media editing: CSS filters only
 - Geolocation: coordinate tagging only, no map/location search
 - Reddit source: public JSON endpoint with fallback data; OAuth/API credentials are currently deferred
+- Trend analysis: keyword extraction exists, but it is not yet connected to admin-managed content suggestions
 
 ## Not Yet Implemented
+- Admin Insights Dashboard
+- User management dashboard
+- Post management and moderation dashboard
+- Trend management dashboard
+- AI-assisted content suggestion workflow
+- Integration management dashboard
+- Admin-only API routes
+- Role-based admin authorization
 - OAuth login
 - Email verification
 - Password reset
@@ -994,11 +1135,19 @@ For a real deployed social network, strengthen the current custom auth with:
 - Follow data filters the database-backed Following feed, but does not yet personalize Reddit or YouTube content
 - Chat and live-room features are currently hidden and tracked as backlog items
 - No server-side user authorization is implemented
+- No admin role or management dashboard is currently implemented
+- Trend keywords are displayed, but there is no approval workflow or content suggestion management yet
 
 ---
 
 # 17. Future Improvements
 
+- Build `/admin` as the next feature, starting with user and post management
+- Add admin-only roles and authorization checks
+- Add trend management using the existing keyword analysis utility
+- Add AI-style content suggestion cards based on trending topics
+- Add integration health cards for Reddit and YouTube
+- Add moderation actions for posts and user accounts
 - OAuth login with Auth.js, Supabase Auth, or another provider
 - Optional Reddit OAuth/API credentials if public Reddit JSON is blocked in production
 - Add followed-first ranking to the For You feed
@@ -1015,8 +1164,35 @@ For a real deployed social network, strengthen the current custom auth with:
 
 ---
 
-# 18. Conclusion
+# 18. Recommended Next Implementation Sequence
+
+The next development branch should focus on the management functionality required by the new assignment question.
+
+## Priority 1: Admin Dashboard Shell
+- Create `/admin`
+- Add dashboard navigation for `Users`, `Posts`, `Trends`, `AI Suggestions`, and `Integrations`
+- Add summary cards for total users, total posts, total comments, total follows, and external source status
+
+## Priority 2: User and Post Management
+- Add user management table from PostgreSQL
+- Add post management table from PostgreSQL
+- Include engagement counts for likes, comments, saves, and shares
+- Add moderation actions such as delete post and disable/reactivate user
+
+## Priority 3: Trend and AI Suggestion Management
+- Reuse `src/lib/trends.ts` to generate dashboard trend keywords
+- Generate simple content ideas and hashtags from trend keywords
+- Allow suggestions to be approved, dismissed, or reused as creator prompts
+
+## Priority 4: Integration Management
+- Display Reddit and YouTube source status
+- Show whether fallback data is active
+- Show missing API key or fetch failure states in a management-friendly format
+
+---
+
+# 19. Conclusion
 
 Bloom & Brew Social is now a deployable social media prototype that combines Reddit-powered community content with core social media interactions. The application demonstrates the required social media platform fundamentals through a frontend demo experience: account creation, profile personalization, feed interactions, content sharing, notifications, following, media editing, calendar-based content prompts, and geolocation. Chat/calling and streaming are documented backlog items for future implementation.
 
-The current version is suitable for academic demonstration and deployment. For production use, the remaining local/demo features should be replaced with persistent database storage, stronger account security, and real-time infrastructure.
+The current version is suitable for academic demonstration and deployment. For the next assignment, the most important expansion is the Admin Insights Dashboard because it connects emerging technologies, richer data, recommendation services, and management functionality in one coherent enhancement. For production use, the remaining local/demo features should be replaced with persistent database storage, stronger account security, role-based authorization, and real-time infrastructure.

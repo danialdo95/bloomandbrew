@@ -39,6 +39,14 @@ export type SocialPost = {
   persistedShareCount?: number;
 };
 
+export type PostShareMethod =
+  | "native"
+  | "copy"
+  | "facebook"
+  | "messenger"
+  | "email"
+  | "whatsapp";
+
 export type NotificationItem = {
   id: string;
   text: string;

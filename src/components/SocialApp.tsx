@@ -19,6 +19,7 @@ import type { RedditPost } from "@/types/reddit";
 import type {
   DemoUser,
   NotificationItem,
+  PostShareMethod,
   SocialPost,
   SocialProfile,
   SuggestedPerson,
@@ -70,6 +71,19 @@ function toExternalPostPayload(post: SocialPost) {
     imageUrl: post.imageUrl,
     createdAt: post.createdAt,
   };
+}
+
+function getShareNotification(method: PostShareMethod) {
+  const labels: Record<PostShareMethod, string> = {
+    native: "Post shared through your device share menu.",
+    copy: "Post link copied and share activity recorded.",
+    facebook: "Post opened for Facebook sharing.",
+    messenger: "Post opened for Messenger sharing.",
+    email: "Post prepared for email sharing.",
+    whatsapp: "Post opened for WhatsApp sharing.",
+  };
+
+  return labels[method];
 }
 
 type ExternalPostStats = {
@@ -885,7 +899,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     clearPostPending(postId);
   }
 
-  async function sharePost(postId: string) {
+  async function sharePost(postId: string, method: PostShareMethod = "copy") {
     if (!requireAuth("share posts")) {
       return;
     }
@@ -944,7 +958,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
             : post,
         ),
       );
-      addNotification("Post shared with your community.");
+      addNotification(getShareNotification(method));
     } catch (error) {
       addNotification(
         error instanceof Error ? error.message : "Share could not be recorded.",
