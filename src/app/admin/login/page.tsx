@@ -13,6 +13,10 @@ export default async function AdminLoginPage() {
     redirect("/admin");
   }
 
+  if (user) {
+    redirect("/");
+  }
+
   return (
     <main className="min-h-screen bg-[#fffaf6] px-5 py-8">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-5xl items-center">

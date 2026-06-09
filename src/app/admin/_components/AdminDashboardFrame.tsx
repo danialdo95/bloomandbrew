@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 
 const dashboardNav = [
@@ -19,6 +19,16 @@ type AdminDashboardFrameProps = {
 
 export function AdminDashboardFrame({ children }: AdminDashboardFrameProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+    });
+
+    router.push("/admin/login");
+    router.refresh();
+  }
 
   return (
     <main className="bg-[#fffaf6]">
@@ -58,6 +68,13 @@ export function AdminDashboardFrame({ children }: AdminDashboardFrameProps) {
                 Add moderation controls and admin-only access.
               </p>
             </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="mt-4 w-full rounded-[6px] border border-[#eadfd4] bg-white px-3 py-2 text-sm font-black text-[#211f1d] transition hover:border-[#c45572] hover:text-[#c45572]"
+            >
+              Sign out
+            </button>
           </div>
         </aside>
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Navbar } from "@/components/Navbar";
+import { getCurrentUser, isAdminUser } from "@/lib/auth";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -8,15 +9,17 @@ export const metadata: Metadata = {
     "A Reddit-powered cafe and florist community platform for social media ecosystem analysis.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const user = await getCurrentUser();
+
   return (
     <html lang="en">
       <body>
-        <Navbar />
+        <Navbar showAdminLink={isAdminUser(user)} />
         {children}
       </body>
     </html>
