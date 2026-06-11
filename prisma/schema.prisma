@@ -17,6 +17,7 @@ model User {
   avatar    String   @default("BB")
   bio       String?
   location  String?
+  status String @default("ACTIVE")
   posts     Post[]
   sessions  Session[]
   following Follow[] @relation("UserFollowing")
