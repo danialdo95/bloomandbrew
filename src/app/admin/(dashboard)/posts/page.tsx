@@ -14,14 +14,26 @@ async function deletePost(formData: FormData) {
 
   const postId = formData.get("postId");
 
-  if (typeof postId !== "string") {
-    return;
-  }
+  if (typeof postId !== "string") return;
 
   await prisma.post.delete({
-    where: {
-      id: postId,
-    },
+    where: { id: postId },
+  });
+
+  revalidatePath("/admin/posts");
+}
+
+async function updatePostStatus(formData: FormData) {
+  "use server";
+
+  const postId = formData.get("postId");
+  const status = formData.get("status");
+
+  if (typeof postId !== "string" || typeof status !== "string") return;
+
+  await prisma.post.update({
+    where: { id: postId },
+    data: { status },
   });
 
   revalidatePath("/admin/posts");
@@ -35,7 +47,7 @@ export default async function AdminPostsPage() {
       <AdminPageHeader
         eyebrow="Post management"
         title="Recent Bloom posts"
-        description="Review database-backed user posts and remove inappropriate content."
+        description="Review database-backed user posts and moderate inappropriate content."
         aside="Moderation active"
       />
 
@@ -53,10 +65,36 @@ export default async function AdminPostsPage() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <p className="text-xs font-black uppercase tracking-[0.12em] text-[#c45572]">
                     {post.community}
                   </p>
+
+                  {post.status === "VISIBLE" ? (
+                    <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
+                      VISIBLE
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-bold text-yellow-700">
+                      HIDDEN
+                    </span>
+                  )}
+
+                  <form action={updatePostStatus}>
+                    <input type="hidden" name="postId" value={post.id} />
+                    <input
+                      type="hidden"
+                      name="status"
+                      value={post.status === "VISIBLE" ? "HIDDEN" : "VISIBLE"}
+                    />
+
+                    <button
+                      type="submit"
+                      className="rounded-[6px] border border-[#eadfd4] px-3 py-2 text-xs font-black text-[#211f1d]"
+                    >
+                      {post.status === "VISIBLE" ? "Hide" : "Restore"}
+                    </button>
+                  </form>
 
                   <form action={deletePost}>
                     <input type="hidden" name="postId" value={post.id} />

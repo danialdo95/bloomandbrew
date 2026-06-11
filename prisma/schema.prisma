@@ -71,6 +71,7 @@ model Post {
   imageUrl  String?
   filter    String   @default("Natural")
   location  String?
+  status String @default("VISIBLE")
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   comments  Comment[]
   likes     Like[]
