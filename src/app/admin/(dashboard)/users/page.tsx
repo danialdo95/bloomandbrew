@@ -3,8 +3,23 @@ import { getAdminUsers } from "@/app/admin/_lib/admin-data";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminUsersPage() {
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ q?: string }>;
+}) {
   const users = await getAdminUsers();
+  const params = await searchParams;
+  const query = params?.q?.toLowerCase() ?? "";
+
+const filteredUsers = users.filter((user) => {
+  return (
+    user.name?.toLowerCase().includes(query) ||
+    user.username?.toLowerCase().includes(query) ||
+    user.email?.toLowerCase().includes(query) ||
+    user.location?.toLowerCase().includes(query)
+  );
+});
 
   return (
     <>
@@ -14,7 +29,22 @@ export default async function AdminUsersPage() {
         description="Review Bloom & Brew accounts, profile locations, post counts, and follower/following relationships."
         aside="Read-only"
       />
+<form className="mt-5 flex items-center gap-3">
+  <input
+    type="text"
+    name="q"
+    defaultValue={query}
+    placeholder="Search users..."
+    className="h-10 w-full rounded-[6px] border border-[#eadfd4] px-4 text-sm"
+  />
 
+  <button
+    type="submit"
+    className="rounded-[6px] bg-[#211f1d] px-4 py-2 text-sm font-bold text-white"
+  >
+    Search
+  </button>
+</form>
       <section className="mt-5 rounded-[6px] border border-[#eadfd4] bg-white shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
@@ -29,7 +59,7 @@ export default async function AdminUsersPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => (
+             {filteredUsers.map((user) => (
                 <tr key={user.id} className="border-t border-[#f2e8df]">
                   <td className="px-5 py-3">
                     <p className="font-black text-[#211f1d]">{user.name}</p>
@@ -50,7 +80,7 @@ export default async function AdminUsersPage() {
                   </td>
                 </tr>
               ))}
-              {!users.length ? (
+             {!filteredUsers.length ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-6 text-center font-bold text-[#8a7d73]">
                     No registered users yet.
