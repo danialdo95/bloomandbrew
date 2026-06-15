@@ -23,6 +23,12 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
       username: normalizedUsername,
     },
     include: {
+      _count: {
+        select: {
+          followers: true,
+          following: true,
+        },
+      },
       posts: {
         include: {
           comments: {
@@ -44,28 +50,16 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
     notFound();
   }
 
-  const [followers, following, isFollowing] = await Promise.all([
-    prisma.follow.count({
-      where: {
-        followingId: user.id,
-      },
-    }),
-    prisma.follow.count({
-      where: {
-        followerId: user.id,
-      },
-    }),
-    currentUser
-      ? prisma.follow.findUnique({
-          where: {
-            followerId_followingId: {
-              followerId: currentUser.id,
-              followingId: user.id,
-            },
+  const isFollowing = currentUser
+    ? await prisma.follow.findUnique({
+        where: {
+          followerId_followingId: {
+            followerId: currentUser.id,
+            followingId: user.id,
           },
-        })
-      : null,
-  ]);
+        },
+      })
+    : null;
 
   const isSelf = currentUser?.id === user.id;
 
@@ -95,8 +89,8 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
                   📍 {user.location ?? "Bloom & Brew Social"}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-3 text-sm font-black text-[#211f1d]">
-                  <span>{followers.toLocaleString()} followers</span>
-                  <span>{following.toLocaleString()} following</span>
+                  <span>{user._count.followers.toLocaleString()} followers</span>
+                  <span>{user._count.following.toLocaleString()} following</span>
                   <span>{user.posts.length.toLocaleString()} posts</span>
                 </div>
               </div>

@@ -91,6 +91,27 @@ export function isAdminUser(user: { email: string } | null | undefined) {
   return Boolean(user?.email && adminEmails.includes(user.email.toLowerCase()));
 }
 
+export async function getUserFollowStats(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      _count: {
+        select: {
+          followers: true,
+          following: true,
+        },
+      },
+    },
+  });
+
+  return {
+    followers: user?._count.followers ?? 0,
+    following: user?._count.following ?? 0,
+  };
+}
+
 export async function createSession(userId: string) {
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);

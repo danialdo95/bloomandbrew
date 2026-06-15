@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getCurrentUser, toAuthUser } from "@/lib/auth";
+import { getCurrentUser, getUserFollowStats, toAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { SocialProfile } from "@/types/social";
 
@@ -15,26 +15,12 @@ export async function GET() {
     return NextResponse.json({ user: null });
   }
 
-  const [followers, following] = await Promise.all([
-    prisma.follow.count({
-      where: {
-        followingId: user.id,
-      },
-    }),
-    prisma.follow.count({
-      where: {
-        followerId: user.id,
-      },
-    }),
-  ]);
+  const stats = await getUserFollowStats(user.id);
 
   return NextResponse.json({
     user: {
       ...toAuthUser(user),
-      stats: {
-        followers,
-        following,
-      },
+      stats,
     },
   });
 }
@@ -73,26 +59,12 @@ export async function PATCH(request: Request) {
       },
     });
 
-    const [followers, following] = await Promise.all([
-      prisma.follow.count({
-        where: {
-          followingId: updatedUser.id,
-        },
-      }),
-      prisma.follow.count({
-        where: {
-          followerId: updatedUser.id,
-        },
-      }),
-    ]);
+    const stats = await getUserFollowStats(updatedUser.id);
 
     return NextResponse.json({
       user: {
         ...toAuthUser(updatedUser),
-        stats: {
-          followers,
-          following,
-        },
+        stats,
       },
     });
   } catch {

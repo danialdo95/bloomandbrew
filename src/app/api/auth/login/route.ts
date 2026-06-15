@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { createSession, toAuthUser, verifyPassword } from "@/lib/auth";
+import {
+  createSession,
+  getUserFollowStats,
+  toAuthUser,
+  verifyPassword,
+} from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
@@ -24,26 +29,12 @@ export async function POST(request: Request) {
 
   await createSession(user.id);
 
-  const [followers, following] = await Promise.all([
-    prisma.follow.count({
-      where: {
-        followingId: user.id,
-      },
-    }),
-    prisma.follow.count({
-      where: {
-        followerId: user.id,
-      },
-    }),
-  ]);
+  const stats = await getUserFollowStats(user.id);
 
   return NextResponse.json({
     user: {
       ...toAuthUser(user),
-      stats: {
-        followers,
-        following,
-      },
+      stats,
     },
   });
 }

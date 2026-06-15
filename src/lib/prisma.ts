@@ -1,8 +1,17 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../generated/prisma/client";
 
+function getDatabasePoolMax() {
+  const value = Number(process.env.DATABASE_POOL_MAX ?? 1);
+
+  return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
+  idleTimeoutMillis: 10_000,
+  connectionTimeoutMillis: 5_000,
+  max: getDatabasePoolMax(),
 });
 
 const globalForPrisma = globalThis as unknown as {
