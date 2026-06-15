@@ -195,6 +195,8 @@ The application fetches and normalizes Reddit posts from cafe, coffee, flower, f
 ## Reliability
 If Reddit requests fail or return no usable posts, the app uses curated fallback content from `src/lib/fallback-posts.ts`. The current implementation uses Reddit's public JSON endpoint, not Reddit OAuth/API credentials.
 
+YouTube follows the same public-feed resilience pattern. If the YouTube Data API key is missing or a request fails, the app shows curated video-inspiration posts instead of exposing setup-looking placeholder text in the public feed.
+
 ---
 
 # 6.2 Social Feed
@@ -206,7 +208,13 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Reddit-seeded posts
 - YouTube API video posts
 - Database-backed user-created posts
+- Server-rendered initial feed composition for Reddit and YouTube content
 - Unified age sorting across Bloom, Reddit, and YouTube sources
+- Admin-only source-aware feed status strip for Bloom, Reddit, YouTube, and engagement sync
+- Themed feed skeleton loading cards
+- Post source badges for Bloom, Reddit, YouTube, and curated fallback content
+- Live new-post indicator for newly available Bloom posts
+- User-triggered feed refresh from the floating new-post button
 - Text post composer
 - Media URL attachment for image links and YouTube links
 - Media preview validation before publishing posts with media links
@@ -1107,8 +1115,14 @@ For a real deployed social network, strengthen the current custom auth with:
 ## Completed
 - Vercel deployment with the Next.js framework preset
 - Reddit feed integration with fallback data
-- YouTube Data API feed integration with fallback message
+- YouTube Data API feed integration with curated fallback content
 - Social feed UI
+- Server-rendered initial feed composition for Reddit and YouTube content
+- Admin-only public feed source status strip for Bloom, Reddit, YouTube, and engagement sync
+- Themed feed skeleton cards for public feed loading
+- Post source badges for Bloom, Reddit, YouTube, and curated fallback content
+- Floating live new-post indicator for newly available Bloom posts
+- `GET /api/posts/updates` lightweight feed update check endpoint
 - Database-backed sign in/sign up modal
 - Google OAuth sign in through `/api/auth/oauth/google/start`
 - Google OAuth callback and account linking through `/api/auth/oauth/google/callback`
@@ -1256,7 +1270,15 @@ For a real deployed social network, strengthen the current custom auth with:
 
 # 18. Recommended Next Implementation Sequence
 
-The next development branch should focus on the management functionality required by the new assignment question.
+The public feed UX hardening milestone is now implemented on the current feature branch. The next development branch should return to the management functionality required by the new assignment question.
+
+## Completed Feed UX Milestone: Public Feed UX Hardening
+- Load Reddit and YouTube content together during the homepage server render
+- Show Bloom database posts, Reddit, YouTube, and engagement sync status to admins only
+- Show themed loading skeletons during feed refresh states
+- Label Bloom, Reddit, YouTube, and curated fallback posts with source badges
+- Check for newly available Bloom posts through `GET /api/posts/updates`
+- Show a floating new-post button below the navbar offset so users can refresh the feed without automatic feed jumps
 
 ## Priority 1: Admin Management Hardening
 - Move admin mutations into dedicated API/server-action helpers where useful

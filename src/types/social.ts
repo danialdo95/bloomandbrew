@@ -16,6 +16,7 @@ export type SocialComment = {
 export type SocialPost = {
   id: string;
   source?: "bloom" | "reddit" | "youtube";
+  sourceLabel?: string;
   author: string;
   username: string;
   avatar: string;
@@ -62,6 +63,7 @@ export type ChatMessage = {
 export type DemoUser = {
   id: string;
   email: string;
+  isAdmin?: boolean;
   profile: SocialProfile;
   stats?: {
     followers: number;

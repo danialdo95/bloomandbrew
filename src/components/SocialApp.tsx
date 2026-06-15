@@ -28,9 +28,19 @@ import type {
 type SocialAppProps = {
   redditPosts: RedditPost[];
   source: "reddit" | "fallback";
+  youtubePosts: SocialPost[];
+  youtubeSource: "youtube" | "fallback";
 };
 
 type FeedMode = "for-you" | "following";
+type FeedSourceStatus = "idle" | "loading" | "ready" | "fallback" | "error" | "syncing";
+
+type FeedSourceState = {
+  bloom: FeedSourceStatus;
+  reddit: FeedSourceStatus;
+  youtube: FeedSourceStatus;
+  interactions: FeedSourceStatus;
+};
 
 const initialNotifications: NotificationItem[] = [
   {
@@ -42,6 +52,128 @@ const initialNotifications: NotificationItem[] = [
 
 function isDatabasePost(post: SocialPost) {
   return post.source === "bloom" || post.community === "Bloom & Brew";
+}
+
+function FeedSourceStatusStrip({
+  feedMode,
+  source,
+  sources,
+}: {
+  feedMode: FeedMode;
+  source: "reddit" | "fallback";
+  sources: FeedSourceState;
+}) {
+  const items = [
+    {
+      label: "Bloom",
+      status: sources.bloom,
+      detail:
+        feedMode === "following"
+          ? "Following posts"
+          : "Community posts",
+    },
+    {
+      label: "Reddit",
+      status: source === "reddit" ? sources.reddit : "fallback",
+      detail: source === "reddit" ? "Live source" : "Curated source",
+    },
+    {
+      label: "YouTube",
+      status: sources.youtube,
+      detail: "Video inspiration",
+    },
+    {
+      label: "Engagement",
+      status: sources.interactions,
+      detail: "Saved reactions",
+    },
+  ];
+
+  return (
+    <div className="grid gap-2 rounded-[6px] border border-[#eadfd4] bg-white p-3 shadow-[0_8px_24px_rgba(64,45,35,0.06)] sm:grid-cols-2 xl:grid-cols-4">
+      {items.map((item) => (
+        <div
+          key={item.label}
+          className="flex items-center justify-between gap-3 rounded-[6px] bg-[#fff8f2] px-3 py-2"
+        >
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-[#8a7d73]">
+              {item.label}
+            </p>
+            <p className="truncate text-sm font-black text-[#211f1d]">{item.detail}</p>
+          </div>
+          <FeedSourceBadge status={item.status} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FeedSourceBadge({ status }: { status: FeedSourceStatus }) {
+  const label = getFeedSourceStatusLabel(status);
+  const className =
+    status === "ready"
+      ? "bg-[#e7f6df] text-[#2f6336]"
+      : status === "fallback"
+        ? "bg-[#fff176] text-[#211f1d]"
+        : status === "loading" || status === "syncing"
+          ? "bg-[#f7c6cf] text-[#211f1d]"
+          : status === "error"
+            ? "bg-[#fbe6e1] text-[#a43f4f]"
+            : "bg-white text-[#6f6259]";
+
+  return (
+    <span className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-black ${className}`}>
+      {status === "loading" || status === "syncing" ? (
+        <LoadingSpinner className="mr-1 h-3 w-3 align-[-2px]" />
+      ) : null}
+      {label}
+    </span>
+  );
+}
+
+function getFeedSourceStatusLabel(status: FeedSourceStatus) {
+  const labels: Record<FeedSourceStatus, string> = {
+    idle: "Idle",
+    loading: "Loading",
+    ready: "Live",
+    fallback: "Curated",
+    error: "Issue",
+    syncing: "Syncing",
+  };
+
+  return labels[status];
+}
+
+function FeedSkeletonList() {
+  return (
+    <div className="space-y-5" aria-hidden="true">
+      {Array.from({ length: 2 }).map((_, index) => (
+        <article
+          key={index}
+          className="animate-pulse rounded-[6px] border border-[#eadfd4] bg-white p-5 shadow-[0_8px_24px_rgba(64,45,35,0.06)]"
+        >
+          <div className="flex gap-3">
+            <div className="h-11 w-11 rounded-full bg-[#f7c6cf]" />
+            <div className="flex-1 space-y-3">
+              <div className="h-4 w-2/5 rounded-full bg-[#eadfd4]" />
+              <div className="h-3 w-1/3 rounded-full bg-[#f3e8df]" />
+              <div className="space-y-2 pt-2">
+                <div className="h-3 rounded-full bg-[#f3e8df]" />
+                <div className="h-3 w-5/6 rounded-full bg-[#f3e8df]" />
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 aspect-video rounded-[6px] bg-[#fff8f2]" />
+          <div className="mt-4 grid grid-cols-4 gap-2">
+            {Array.from({ length: 4 }).map((_, buttonIndex) => (
+              <div key={buttonIndex} className="h-9 rounded-full bg-[#f3e8df]" />
+            ))}
+          </div>
+        </article>
+      ))}
+    </div>
+  );
 }
 
 function isExternalPost(post: SocialPost) {
@@ -57,6 +189,20 @@ function sortPostsByAge(posts: SocialPost[]) {
     (first, second) =>
       new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime(),
   );
+}
+
+function getLatestPostDate(posts: SocialPost[]) {
+  return posts.reduce<string | null>((latest, post) => {
+    if (!isDatabasePost(post)) {
+      return latest;
+    }
+
+    if (!latest || new Date(post.createdAt).getTime() > new Date(latest).getTime()) {
+      return post.createdAt;
+    }
+
+    return latest;
+  }, null);
 }
 
 function toExternalPostPayload(post: SocialPost) {
@@ -100,12 +246,38 @@ type AuthMeResponse = {
   user: DemoUser | null;
 };
 
-export function SocialApp({ redditPosts, source }: SocialAppProps) {
+export function SocialApp({
+  redditPosts,
+  source,
+  youtubePosts,
+  youtubeSource,
+}: SocialAppProps) {
+  const initialRedditPosts = useMemo(
+    () => seedSocialPosts(redditPosts).map((post) => ({
+      ...post,
+      sourceLabel: source === "reddit" ? undefined : "Curated Reddit inspiration",
+    })),
+    [redditPosts, source],
+  );
+  const initialYouTubePosts = useMemo(
+    () => youtubePosts.map((post) => ({
+      ...post,
+      sourceLabel:
+        youtubeSource === "fallback"
+          ? "Curated YouTube inspiration"
+          : post.sourceLabel,
+    })),
+    [youtubePosts, youtubeSource],
+  );
+  const initialExternalPosts = useMemo(
+    () => sortPostsByAge([...initialRedditPosts, ...initialYouTubePosts]),
+    [initialRedditPosts, initialYouTubePosts],
+  );
   const [storageReady, setStorageReady] = useState(false);
   const [currentUser, setCurrentUser] = useState<DemoUser | null>(null);
   const [profile, setProfile] = useState<SocialProfile>(defaultProfile);
   const [posts, setPosts] = useState<SocialPost[]>(() =>
-    sortPostsByAge(seedSocialPosts(redditPosts)),
+    initialExternalPosts,
   );
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -129,6 +301,15 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   const [isExternalFeedLoading, setIsExternalFeedLoading] = useState(false);
   const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const [feedSources, setFeedSources] = useState<FeedSourceState>({
+    bloom: "loading",
+    reddit: source === "reddit" ? "ready" : "fallback",
+    youtube: youtubeSource === "youtube" ? "ready" : "fallback",
+    interactions: "idle",
+  });
+  const [latestBloomPostAt, setLatestBloomPostAt] = useState<string | null>(null);
+  const [newPostCount, setNewPostCount] = useState(0);
+  const [feedRefreshKey, setFeedRefreshKey] = useState(0);
   const [pendingFollowId, setPendingFollowId] = useState<string | null>(null);
   const [pendingPostActions, setPendingPostActions] = useState<
     Record<string, Exclude<FeedPostPendingAction, null>>
@@ -136,6 +317,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   const [feedMode, setFeedMode] = useState<FeedMode>("for-you");
   const [followRefreshKey, setFollowRefreshKey] = useState(0);
   const postsRef = useRef(posts);
+  const feedTopRef = useRef<HTMLElement | null>(null);
 
   const isAuthenticated = Boolean(currentUser);
   const externalPostKey = useMemo(
@@ -281,10 +463,12 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       }
 
       setIsFeedLoading(true);
+      setFeedSources((current) => ({ ...current, bloom: "loading" }));
 
       if (feedMode === "following" && !isAuthenticated) {
         setPosts([]);
         setIsFeedLoading(false);
+        setFeedSources((current) => ({ ...current, bloom: "idle" }));
         return;
       }
 
@@ -305,6 +489,9 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
           return;
         }
 
+        setLatestBloomPostAt(getLatestPostDate(data.posts) ?? new Date().toISOString());
+        setNewPostCount(0);
+
         setPosts((current) => {
           if (feedMode === "following") {
             return sortPostsByAge(data.posts);
@@ -314,15 +501,17 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
           const externalPosts = current.filter((post) => !isDatabasePost(post));
           const fallbackExternalPosts = externalPosts.length
             ? externalPosts
-            : seedSocialPosts(redditPosts);
+            : initialExternalPosts;
 
           return sortPostsByAge([
             ...data.posts,
             ...fallbackExternalPosts.filter((post) => !existingIds.has(post.id)),
           ]);
         });
+        setFeedSources((current) => ({ ...current, bloom: "ready" }));
       } catch (error) {
         console.error(error);
+        setFeedSources((current) => ({ ...current, bloom: "error" }));
       } finally {
         if (active) {
           setIsFeedLoading(false);
@@ -335,7 +524,15 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     return () => {
       active = false;
     };
-  }, [feedMode, followRefreshKey, isAuthenticated, profile.username, redditPosts, storageReady]);
+  }, [
+    feedMode,
+    feedRefreshKey,
+    followRefreshKey,
+    initialExternalPosts,
+    isAuthenticated,
+    profile.username,
+    storageReady,
+  ]);
 
   useEffect(() => {
     let active = true;
@@ -377,20 +574,38 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
 
     async function loadYouTubePosts() {
       if (feedMode !== "for-you") {
+        setFeedSources((current) => ({ ...current, youtube: "idle" }));
+        return;
+      }
+
+      if (feedRefreshKey === 0) {
+        setFeedSources((current) => ({
+          ...current,
+          youtube: youtubeSource === "youtube" ? "ready" : "fallback",
+        }));
         return;
       }
 
       setIsExternalFeedLoading(true);
+      setFeedSources((current) => ({ ...current, youtube: "loading" }));
 
       try {
         const response = await fetch("/api/youtube");
-        const data = (await response.json()) as { posts?: SocialPost[] };
+        const data = (await response.json()) as {
+          posts?: SocialPost[];
+          source?: "youtube" | "fallback";
+        };
 
         if (!active || !data.posts?.length) {
+          setFeedSources((current) => ({ ...current, youtube: "error" }));
           return;
         }
 
-        const youtubePosts = data.posts;
+        const youtubePosts = data.posts.map((post) => ({
+          ...post,
+          sourceLabel:
+            data.source === "fallback" ? "Curated YouTube inspiration" : post.sourceLabel,
+        }));
 
         setPosts((current) => {
           const youtubeIds = new Set(youtubePosts.map((post) => post.id));
@@ -404,8 +619,13 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
 
           return sortPostsByAge([...databasePosts, ...youtubePosts, ...otherPosts]);
         });
+        setFeedSources((current) => ({
+          ...current,
+          youtube: data.source === "fallback" ? "fallback" : "ready",
+        }));
       } catch (error) {
         console.error(error);
+        setFeedSources((current) => ({ ...current, youtube: "error" }));
       } finally {
         if (active) {
           setIsExternalFeedLoading(false);
@@ -418,7 +638,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
     return () => {
       active = false;
     };
-  }, [feedMode]);
+  }, [feedMode, feedRefreshKey, youtubeSource]);
 
   useEffect(() => {
     let active = true;
@@ -429,6 +649,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       }
 
       const externalPosts = postsRef.current.filter(isExternalPost);
+      setFeedSources((current) => ({ ...current, interactions: "syncing" }));
 
       try {
         const response = await fetch("/api/external-posts/sync", {
@@ -473,6 +694,10 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         );
       } catch (error) {
         console.error(error);
+      } finally {
+        if (active) {
+          setFeedSources((current) => ({ ...current, interactions: "ready" }));
+        }
       }
     }
 
@@ -482,6 +707,54 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       active = false;
     };
   }, [currentUser?.id, externalPostKey, feedMode, storageReady]);
+
+  useEffect(() => {
+    if (feedMode !== "for-you" || !latestBloomPostAt) {
+      setNewPostCount(0);
+      return;
+    }
+
+    let active = true;
+
+    async function checkForNewPosts() {
+      try {
+        const params = new URLSearchParams({
+          after: latestBloomPostAt as string,
+        });
+        const response = await fetch(`/api/posts/updates?${params.toString()}`);
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as {
+          count?: number;
+        };
+
+        if (active) {
+          setNewPostCount(Math.max(data.count ?? 0, 0));
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    const intervalId = window.setInterval(() => {
+      void checkForNewPosts();
+    }, 45000);
+
+    function handleFocus() {
+      void checkForNewPosts();
+    }
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [feedMode, latestBloomPostAt]);
 
   const trends = useMemo(() => {
     return getTrendingKeywords(
@@ -502,6 +775,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   }, [posts]);
 
   const isFeedBusy = isFeedLoading || isExternalFeedLoading;
+  const showFeedSkeletons = isFeedBusy && posts.length <= initialExternalPosts.length;
 
   function addNotification(text: string) {
     const optimisticNotification = {
@@ -546,6 +820,18 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
       .catch((error) => {
         console.error(error);
       });
+  }
+
+  function refreshFeedFromNotice() {
+    setNewPostCount(0);
+    setFeedRefreshKey((current) => current + 1);
+    window.requestAnimationFrame(() => {
+      feedTopRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+    addNotification("Feed refreshed.");
   }
 
   useEffect(() => {
@@ -738,6 +1024,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
         data.post as SocialPost,
         ...current.filter((post) => post.id !== data.post?.id),
       ]));
+      setLatestBloomPostAt((data.post as SocialPost).createdAt);
       setContent("");
       setImageUrl("");
       setFilter("Natural");
@@ -1338,7 +1625,7 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
           />
         </aside>
 
-        <section className="order-1 space-y-5 lg:order-none">
+        <section ref={feedTopRef} className="order-1 space-y-5 lg:order-none">
           <div className="flex items-center justify-between gap-3 rounded-[6px] border border-[#eadfd4] bg-white p-2 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
             <div className="grid flex-1 grid-cols-2 gap-2">
               {([
@@ -1379,6 +1666,26 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
             isLocating={isLocating}
           />
 
+          {currentUser?.isAdmin ? (
+            <FeedSourceStatusStrip
+              feedMode={feedMode}
+              source={source}
+              sources={feedSources}
+            />
+          ) : null}
+
+          {newPostCount > 0 && feedMode === "for-you" ? (
+            <button
+              type="button"
+              onClick={refreshFeedFromNotice}
+              className="sticky top-28 z-30 mx-auto flex items-center gap-2 rounded-full border border-[#eadfd4] bg-[#211f1d] px-5 py-3 text-sm font-black text-white shadow-[0_16px_48px_rgba(33,31,29,0.22)] transition hover:bg-[#c45572] md:top-32"
+              aria-live="polite"
+            >
+              <span className="h-2 w-2 rounded-full bg-[#fff176]" />
+              {newPostCount === 1 ? "1 new post available" : `${newPostCount} new posts available`}
+            </button>
+          ) : null}
+
           {isFeedBusy ? (
             <div
               className="flex items-center gap-3 rounded-[6px] border border-[#eadfd4] bg-white px-5 py-4 text-sm font-black text-[#6f6259] shadow-[0_8px_24px_rgba(64,45,35,0.06)]"
@@ -1391,6 +1698,8 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
                 : "Refreshing Bloom, Reddit, and YouTube posts..."}
             </div>
           ) : null}
+
+          {showFeedSkeletons ? <FeedSkeletonList /> : null}
 
           {posts.length ? (
             posts.map((post) => (
