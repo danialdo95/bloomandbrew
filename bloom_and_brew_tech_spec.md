@@ -250,6 +250,7 @@ The app includes a popup modal for sign in and sign up.
 - Account status display
 - Disabled account login blocking
 - Disabled account session invalidation
+- Disabled-session popup message for previously logged-in users
 - Sign out
 - Login required before key interactions
 
@@ -1168,6 +1169,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Admin mutation-level authorization checks for user edit/status and post moderation server actions
 - Disabled users are blocked from regular login and admin login
 - Existing disabled-user sessions are invalidated by the current-user lookup
+- The app shows a themed disabled-account popup when an existing session is invalidated
 
 ## Partially Implemented
 - Feed persistence: user-created posts persist in PostgreSQL, while Reddit/YouTube content remains externally sourced and is mirrored only for interaction persistence
@@ -1252,7 +1254,6 @@ The next development branch should focus on the management functionality require
 
 ## Priority 1: Admin Management Hardening
 - Move admin mutations into dedicated API/server-action helpers where useful
-- Add clearer disabled-account UI messaging after a previously logged-in session is invalidated
 
 ## Priority 2: Database-Backed Admin Roles
 - Add a user role or admin flag to Prisma

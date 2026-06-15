@@ -155,12 +155,15 @@ export async function clearSession() {
   cookieStore.delete(SESSION_COOKIE);
 }
 
-export async function getCurrentUser() {
+export async function getCurrentUserResult() {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
 
   if (!token) {
-    return null;
+    return {
+      disabled: false,
+      user: null,
+    };
   }
 
   const session = await prisma.session.findUnique({
@@ -172,7 +175,9 @@ export async function getCurrentUser() {
     },
   });
 
-  if (!session || session.expiresAt <= new Date() || !isActiveUser(session.user)) {
+  const disabled = Boolean(session && !isActiveUser(session.user));
+
+  if (!session || session.expiresAt <= new Date() || disabled) {
     if (session) {
       await prisma.session.delete({
         where: {
@@ -183,8 +188,20 @@ export async function getCurrentUser() {
 
     cookieStore.delete(SESSION_COOKIE);
 
-    return null;
+    return {
+      disabled,
+      user: null,
+    };
   }
 
-  return session.user;
+  return {
+    disabled: false,
+    user: session.user,
+  };
+}
+
+export async function getCurrentUser() {
+  const result = await getCurrentUserResult();
+
+  return result.user;
 }
