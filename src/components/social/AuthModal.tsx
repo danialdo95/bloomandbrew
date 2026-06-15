@@ -142,6 +142,25 @@ export function AuthModal({
             Bloom & Brew is a social experiment and not a real social network.
           </p>
         </form>
+
+        <div className="mt-5">
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-[#eadfd4]" />
+            <span className="text-xs font-black uppercase tracking-[0.14em] text-[#8a7d73]">
+              Or
+            </span>
+            <span className="h-px flex-1 bg-[#eadfd4]" />
+          </div>
+          <a
+            href="/api/auth/oauth/google/start"
+            className="mt-4 flex h-12 w-full items-center justify-center gap-3 rounded-full border border-[#eadfd4] bg-white text-sm font-black text-[#211f1d] transition hover:border-[#c45572] hover:text-[#c45572]"
+          >
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#fff8f2] text-xs font-black text-[#c45572]">
+              G
+            </span>
+            Continue with Google
+          </a>
+        </div>
       </div>
     </div>
   );

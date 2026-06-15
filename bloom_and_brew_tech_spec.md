@@ -153,7 +153,7 @@ Admin dashboard ─→ content suggestions, moderation actions, integration stat
 | Social Media API | Reddit public JSON API |
 | Video Platform API | YouTube Data API |
 | Hosting | Vercel |
-| Authentication | Custom database-backed authentication |
+| Authentication | Custom database-backed authentication with email/password and Google OAuth |
 | Database | Prisma Postgres / PostgreSQL |
 | ORM | Prisma ORM |
 | State Management | React Hooks |
@@ -239,12 +239,14 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 # 6.3 Authentication
 
 ## Description
-The app includes a popup modal for sign in and sign up.
+The app includes a popup modal for sign in and sign up. Users can authenticate through the original email/password flow or continue with Google OAuth.
 
 ## Features
 - Sign in modal
 - Sign up modal
+- Google OAuth sign in
 - Database-backed account creation
+- Database-backed OAuth account linking
 - Password hashing
 - HTTP-only session cookie
 - Account status display
@@ -255,7 +257,7 @@ The app includes a popup modal for sign in and sign up.
 - Login required before key interactions
 
 ## Limitation
-This is a custom prototype authentication flow. It uses hashed passwords and database-backed sessions, but it does not yet include email verification, OAuth, password reset, rate limiting, or advanced account security controls.
+This is a custom prototype authentication flow. It uses hashed passwords, Google OAuth identity linking, and database-backed sessions, but it does not yet include password reset, rate limiting, or advanced account security controls.
 
 ---
 
@@ -702,10 +704,12 @@ POST /api/auth/login
 POST /api/auth/logout
 GET /api/auth/me
 PATCH /api/auth/me
+GET /api/auth/oauth/google/start
+GET /api/auth/oauth/google/callback
 ```
 
 ### Description
-These routes manage Bloom & Brew user accounts and sessions. Passwords are hashed before storage, and authenticated sessions are stored in PostgreSQL with an HTTP-only cookie.
+These routes manage Bloom & Brew user accounts and sessions. Passwords are hashed before storage, Google OAuth accounts are linked through the `OAuthAccount` table, and authenticated sessions are stored in PostgreSQL with an HTTP-only cookie.
 
 ### Signup Request Shape
 
@@ -1060,7 +1064,7 @@ prisma.config.ts
 | Serving Port | Managed by Vercel |
 | Domain | Vercel generated or custom domain |
 | Database | Prisma Postgres / PostgreSQL |
-| Required Environment Variables | `DATABASE_URL`, `YOUTUBE_API_KEY` |
+| Required Environment Variables | `DATABASE_URL`, `YOUTUBE_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXT_PUBLIC_APP_URL` |
 
 ## Current Build Scripts
 
@@ -1106,6 +1110,9 @@ For a real deployed social network, strengthen the current custom auth with:
 - YouTube Data API feed integration with fallback message
 - Social feed UI
 - Database-backed sign in/sign up modal
+- Google OAuth sign in through `/api/auth/oauth/google/start`
+- Google OAuth callback and account linking through `/api/auth/oauth/google/callback`
+- `OAuthAccount` table for provider identity links
 - Database-backed profile personalization
 - Hashed password storage
 - HTTP-only session cookies
@@ -1175,7 +1182,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Feed persistence: user-created posts persist in PostgreSQL, while Reddit/YouTube content remains externally sourced and is mirrored only for interaction persistence
 - YouTube persistence: YouTube video posts are fetched from the API and embedded in the feed, while user interactions are saved locally in PostgreSQL
 - Follow personalization: follow records persist in PostgreSQL and power a Following feed, but external Reddit/YouTube posts are not personalized by follows
-- User identity: real accounts exist, but there is no email verification, password reset, OAuth, or advanced account security yet
+- User identity: real accounts and Google OAuth accounts exist, but there is no password reset, multi-provider linking UI, or advanced account security yet
 - Authorization: admin allowlist protection exists, but there is no database-backed admin role field yet
 - Notifications: in-app notifications are database-backed, with browser permission request but no push service worker
 - Media editing: CSS filters only
@@ -1193,7 +1200,6 @@ For a real deployed social network, strengthen the current custom auth with:
 - Admin-only management API mutation routes
 - Database-backed admin role field
 - Share analytics by platform/method
-- OAuth login
 - Email verification
 - Password reset
 - Friend request accept/decline workflow
@@ -1232,7 +1238,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Add AI-style suggestion approval, dismissal, and reuse workflows
 - Add richer integration health cards for Reddit and YouTube
 - Add share analytics by platform/method
-- OAuth login with Auth.js, Supabase Auth, or another provider
+- Expand OAuth support beyond Google or migrate to Auth.js/Supabase Auth for a production-grade provider layer
 - Optional Reddit OAuth/API credentials if public Reddit JSON is blocked in production
 - Add followed-first ranking to the For You feed
 - Extend PostgreSQL persistence to messages
