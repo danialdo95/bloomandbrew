@@ -6,6 +6,8 @@ import type { SocialProfile } from "@/types/social";
 
 const SESSION_COOKIE = "bloom_brew_session";
 const SESSION_DAYS = 30;
+export const DISABLED_ACCOUNT_MESSAGE =
+  "This account has been disabled. Please contact an administrator.";
 
 function normalizeUsername(value: string) {
   return value.replace(/[^a-z0-9_]/gi, "").toLowerCase() || "bloombarista";
@@ -91,6 +93,10 @@ export function isAdminUser(user: { email: string } | null | undefined) {
   return Boolean(user?.email && adminEmails.includes(user.email.toLowerCase()));
 }
 
+export function isActiveUser(user: { status?: string | null } | null | undefined) {
+  return user?.status !== "DISABLED";
+}
+
 export async function getUserFollowStats(userId: string) {
   const user = await prisma.user.findUnique({
     where: {
@@ -166,7 +172,7 @@ export async function getCurrentUser() {
     },
   });
 
-  if (!session || session.expiresAt <= new Date()) {
+  if (!session || session.expiresAt <= new Date() || !isActiveUser(session.user)) {
     if (session) {
       await prisma.session.delete({
         where: {
@@ -174,6 +180,8 @@ export async function getCurrentUser() {
         },
       });
     }
+
+    cookieStore.delete(SESSION_COOKIE);
 
     return null;
   }

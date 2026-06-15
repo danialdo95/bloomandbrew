@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 
 import {
   createSession,
+  DISABLED_ACCOUNT_MESSAGE,
   getUserFollowStats,
+  isActiveUser,
   toAuthUser,
   verifyPassword,
 } from "@/lib/auth";
@@ -25,6 +27,10 @@ export async function POST(request: Request) {
 
   if (!user || !verifyPassword(password, user.passwordHash)) {
     return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
+  }
+
+  if (!isActiveUser(user)) {
+    return NextResponse.json({ error: DISABLED_ACCOUNT_MESSAGE }, { status: 403 });
   }
 
   await createSession(user.id);
