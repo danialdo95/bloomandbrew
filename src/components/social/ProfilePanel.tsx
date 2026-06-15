@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useState } from "react";
 
 import { LoadingSpinner } from "@/components/social/LoadingSpinner";
@@ -23,6 +24,7 @@ export function ProfilePanel({
   const [draft, setDraft] = useState(profile);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const profileHref = `/users/${profile.username}`;
 
   function updateDraft(nextProfile: SocialProfile) {
     setDraft(nextProfile);
@@ -67,15 +69,35 @@ export function ProfilePanel({
 
   return (
     <section className="rounded-[6px] border border-[#eadfd4] bg-white p-5 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
-      <div className="flex items-center gap-3">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f7c6cf] text-lg font-black text-[#211f1d]">
-          {profile.avatar}
+      {isAuthenticated ? (
+        <Link
+          href={profileHref}
+          className="group flex w-fit max-w-full items-center gap-3 rounded-[6px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c45572] focus-visible:ring-offset-2"
+          aria-label={`View ${profile.name}'s profile`}
+        >
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#f7c6cf] text-lg font-black text-[#211f1d] transition group-hover:bg-[#fff176]">
+            {profile.avatar}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate font-black text-[#211f1d] group-hover:underline">
+              {profile.name}
+            </span>
+            <span className="block truncate text-sm font-bold text-[#8a7d73]">
+              @{profile.username}
+            </span>
+          </span>
+        </Link>
+      ) : (
+        <div className="flex items-center gap-3">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f7c6cf] text-lg font-black text-[#211f1d]">
+            {profile.avatar}
+          </div>
+          <div className="min-w-0">
+            <h2 className="truncate font-black text-[#211f1d]">{profile.name}</h2>
+            <p className="truncate text-sm font-bold text-[#8a7d73]">@{profile.username}</p>
+          </div>
         </div>
-        <div>
-          <h2 className="font-black text-[#211f1d]">{profile.name}</h2>
-          <p className="text-sm font-bold text-[#8a7d73]">@{profile.username}</p>
-        </div>
-      </div>
+      )}
       <p className="mt-4 text-sm leading-6 text-[#6f6259]">{profile.bio}</p>
       <p className="mt-3 text-sm font-bold text-[#c45572]">📍 {profile.location}</p>
       <div className="mt-4 grid grid-cols-2 gap-2">
@@ -96,9 +118,16 @@ export function ProfilePanel({
         <p className="text-xs font-black uppercase tracking-[0.16em] text-[#c45572]">
           Account status
         </p>
-        <p className="mt-1 text-sm font-bold text-[#211f1d]">
-          {isAuthenticated ? `Signed in with ${currentUser?.email}` : "Guest mode"}
-        </p>
+        {isAuthenticated ? (
+          <Link
+            href={profileHref}
+            className="mt-1 block break-all text-sm font-bold text-[#211f1d] transition hover:text-[#c45572] hover:underline"
+          >
+            Signed in with {currentUser?.email}
+          </Link>
+        ) : (
+          <p className="mt-1 text-sm font-bold text-[#211f1d]">Guest mode</p>
+        )}
         {!isAuthenticated ? (
           <button
             type="button"

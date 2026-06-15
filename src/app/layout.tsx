@@ -7,6 +7,11 @@ export const metadata: Metadata = {
   title: "Bloom & Brew Social",
   description:
     "A Reddit-powered cafe and florist community platform for social media ecosystem analysis.",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default async function RootLayout({

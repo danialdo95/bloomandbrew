@@ -310,6 +310,7 @@ export function SocialApp({
   const [latestBloomPostAt, setLatestBloomPostAt] = useState<string | null>(null);
   const [newPostCount, setNewPostCount] = useState(0);
   const [feedRefreshKey, setFeedRefreshKey] = useState(0);
+  const [postPendingDelete, setPostPendingDelete] = useState<SocialPost | null>(null);
   const [pendingFollowId, setPendingFollowId] = useState<string | null>(null);
   const [pendingPostActions, setPendingPostActions] = useState<
     Record<string, Exclude<FeedPostPendingAction, null>>
@@ -775,7 +776,7 @@ export function SocialApp({
   }, [posts]);
 
   const isFeedBusy = isFeedLoading || isExternalFeedLoading;
-  const showFeedSkeletons = isFeedBusy && posts.length <= initialExternalPosts.length;
+  const showFeedSkeletons = isFeedBusy;
 
   function addNotification(text: string) {
     const optimisticNotification = {
@@ -831,7 +832,7 @@ export function SocialApp({
         block: "start",
       });
     });
-    addNotification("Feed refreshed.");
+    addNotification("Refreshing your feed...");
   }
 
   useEffect(() => {
@@ -1451,7 +1452,7 @@ export function SocialApp({
     clearPostPending(postId);
   }
 
-  async function deletePost(postId: string) {
+  function requestDeletePost(postId: string) {
     if (!requireAuth("delete posts")) {
       return;
     }
@@ -1467,11 +1468,17 @@ export function SocialApp({
       return;
     }
 
-    const confirmed = window.confirm("Delete this post?");
+    setPostPendingDelete(targetPost);
+  }
 
-    if (!confirmed) {
+  async function confirmDeletePost() {
+    const targetPost = postPendingDelete;
+
+    if (!targetPost) {
       return;
     }
+
+    const postId = targetPost.id;
 
     setPostPending(postId, "delete");
 
@@ -1489,6 +1496,7 @@ export function SocialApp({
       }
 
       setPosts((current) => current.filter((post) => post.id !== postId));
+      setPostPendingDelete(null);
       addNotification("Post deleted.");
     } catch (error) {
       addNotification(
@@ -1597,7 +1605,7 @@ export function SocialApp({
   }
 
   return (
-    <main className="bg-[#fffaf6]">
+    <main className="overflow-x-clip bg-[#fffaf6]">
       <SocialHero
         isAuthenticated={isAuthenticated}
         profile={profile}
@@ -1625,7 +1633,7 @@ export function SocialApp({
           />
         </aside>
 
-        <section ref={feedTopRef} className="order-1 space-y-5 lg:order-none">
+        <section ref={feedTopRef} className="order-1 min-w-0 space-y-5 lg:order-none">
           <div className="flex items-center justify-between gap-3 rounded-[6px] border border-[#eadfd4] bg-white p-2 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
             <div className="grid flex-1 grid-cols-2 gap-2">
               {([
@@ -1678,7 +1686,7 @@ export function SocialApp({
             <button
               type="button"
               onClick={refreshFeedFromNotice}
-              className="sticky top-28 z-30 mx-auto flex items-center gap-2 rounded-full border border-[#eadfd4] bg-[#211f1d] px-5 py-3 text-sm font-black text-white shadow-[0_16px_48px_rgba(33,31,29,0.22)] transition hover:bg-[#c45572] md:top-32"
+              className="sticky top-28 z-30 mx-auto flex max-w-[calc(100vw-2rem)] items-center gap-2 whitespace-nowrap rounded-full border border-[#eadfd4] bg-[#211f1d] px-5 py-3 text-sm font-black text-white shadow-[0_16px_48px_rgba(33,31,29,0.22)] transition hover:bg-[#c45572] md:top-32"
               aria-live="polite"
             >
               <span className="h-2 w-2 rounded-full bg-[#fff176]" />
@@ -1695,13 +1703,13 @@ export function SocialApp({
               <LoadingSpinner className="text-[#c45572]" />
               {feedMode === "following"
                 ? "Loading your following feed..."
-                : "Refreshing Bloom, Reddit, and YouTube posts..."}
+                : "Loading Bloom, Reddit, and YouTube posts..."}
             </div>
           ) : null}
 
           {showFeedSkeletons ? <FeedSkeletonList /> : null}
 
-          {posts.length ? (
+          {!showFeedSkeletons && posts.length ? (
             posts.map((post) => (
               <FeedPost
                 key={post.id}
@@ -1715,7 +1723,7 @@ export function SocialApp({
                   void toggleBookmark(postId);
                 }}
                 onDelete={(postId) => {
-                  void deletePost(postId);
+                  requestDeletePost(postId);
                 }}
                 onCommentDraftChange={(postId, value) =>
                   setCommentDrafts((current) => ({ ...current, [postId]: value }))
@@ -1725,18 +1733,33 @@ export function SocialApp({
                 }}
               />
             ))
-          ) : (
+          ) : !showFeedSkeletons ? (
             <div className="rounded-[6px] border border-dashed border-[#d8c8bc] bg-white p-8 text-center shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
               <h2 className="text-xl font-black text-[#211f1d]">
-                {feedMode === "following" ? "Build your following feed" : "No posts yet"}
+                {feedMode === "following"
+                  ? isAuthenticated
+                    ? "Your following feed is quiet"
+                    : "Sign in to view your following feed"
+                  : "No posts yet"}
               </h2>
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#6f6259]">
                 {feedMode === "following"
-                  ? "Follow suggested creators or publish your own post to make this feed bloom."
+                  ? isAuthenticated
+                    ? "Follow suggested creators or publish your own post to start the conversation."
+                    : "Your personalized feed will collect posts from creators you follow."
                   : "Share the first cafe, bouquet, or latte moment."}
               </p>
+              {feedMode === "following" && !isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={() => openAuth("signin")}
+                  className="mt-5 rounded-full bg-[#211f1d] px-6 py-3 text-sm font-black text-white transition hover:bg-[#c45572]"
+                >
+                  Sign in
+                </button>
+              ) : null}
             </div>
-          )}
+          ) : null}
         </section>
 
         <SocialSidebar
@@ -1769,6 +1792,74 @@ export function SocialApp({
           onPasswordChange={setAuthPassword}
           onSubmit={handleAuthSubmit}
         />
+      ) : null}
+
+      {postPendingDelete ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#211f1d]/60 px-4 py-8 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-post-title"
+          onClick={() => {
+            if (!pendingPostActions[postPendingDelete.id]) {
+              setPostPendingDelete(null);
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-[8px] border border-[#eadfd4] bg-white shadow-[0_24px_80px_rgba(33,31,29,0.3)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="border-b border-[#f2e8df] bg-[#fffaf6] px-6 py-5">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#c45572]">
+                Delete post
+              </p>
+              <h2
+                id="delete-post-title"
+                className="mt-2 text-2xl font-black text-[#211f1d]"
+              >
+                Remove this feed post?
+              </h2>
+            </div>
+            <div className="space-y-4 px-6 py-5">
+              <p className="text-sm font-bold leading-6 text-[#6f6259]">
+                This will permanently delete your Bloom & Brew post from the
+                public feed. Comments, likes, saves, and shares attached to it
+                will also be removed.
+              </p>
+              <div className="rounded-[6px] border border-[#eadfd4] bg-[#fff8f2] px-4 py-3">
+                <p className="line-clamp-3 text-sm font-bold leading-6 text-[#211f1d]">
+                  {postPendingDelete.content}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap justify-end gap-3 border-t border-[#f2e8df] bg-[#fffaf6] px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setPostPendingDelete(null)}
+                disabled={Boolean(pendingPostActions[postPendingDelete.id])}
+                className="rounded-[6px] border border-[#eadfd4] bg-white px-5 py-2 text-sm font-black text-[#211f1d] transition hover:border-[#c45572] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void confirmDeletePost();
+                }}
+                disabled={Boolean(pendingPostActions[postPendingDelete.id])}
+                className="inline-flex items-center gap-2 rounded-[6px] bg-[#c45572] px-5 py-2 text-sm font-black text-white transition hover:bg-[#211f1d] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {pendingPostActions[postPendingDelete.id] === "delete" ? (
+                  <LoadingSpinner className="h-3 w-3" />
+                ) : null}
+                {pendingPostActions[postPendingDelete.id] === "delete"
+                  ? "Deleting..."
+                  : "Delete post"}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {disabledAccountMessage ? (

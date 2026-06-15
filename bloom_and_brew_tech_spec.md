@@ -215,6 +215,11 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Post source badges for Bloom, Reddit, YouTube, and curated fallback content
 - Live new-post indicator for newly available Bloom posts
 - User-triggered feed refresh from the floating new-post button
+- Compact icon-and-count post actions optimized for desktop and mobile
+- Expandable long post content with Read more and Show less controls
+- Stable responsive media framing to reduce feed layout movement
+- Contextual Following-feed empty states with a direct sign-in action
+- Full skeleton-card loading state while feed sources are being combined or refreshed
 - Text post composer
 - Media URL attachment for image links and YouTube links
 - Media preview validation before publishing posts with media links
@@ -224,6 +229,7 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Comment system
 - Share counter
 - Save/bookmark state
+- Themed delete confirmation modal for deleting a user's own feed posts
 - Embedded YouTube videos inside feed posts
 - Composer preview for pasted YouTube watch, Shorts, embed, live, and youtu.be links
 - Composer blocks post publishing when a pasted media link cannot be previewed
@@ -1123,6 +1129,8 @@ For a real deployed social network, strengthen the current custom auth with:
 - Post source badges for Bloom, Reddit, YouTube, and curated fallback content
 - Floating live new-post indicator for newly available Bloom posts
 - `GET /api/posts/updates` lightweight feed update check endpoint
+- Compact responsive post actions, expandable content, and improved Following-feed empty states
+- Themed delete confirmation modal for user-owned Bloom feed posts
 - Database-backed sign in/sign up modal
 - Google OAuth sign in through `/api/auth/oauth/google/start`
 - Google OAuth callback and account linking through `/api/auth/oauth/google/callback`
@@ -1279,6 +1287,8 @@ The public feed UX hardening milestone is now implemented on the current feature
 - Label Bloom, Reddit, YouTube, and curated fallback posts with source badges
 - Check for newly available Bloom posts through `GET /api/posts/updates`
 - Show a floating new-post button below the navbar offset so users can refresh the feed without automatic feed jumps
+- Use compact icon-and-count actions, responsive comment controls, and expandable long-form post content
+- Show skeleton cards during feed refreshes and contextual empty states after Following loads
 
 ## Priority 1: Admin Management Hardening
 - Move admin mutations into dedicated API/server-action helpers where useful
