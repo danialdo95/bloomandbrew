@@ -248,6 +248,8 @@ The app includes a popup modal for sign in and sign up.
 - Password hashing
 - HTTP-only session cookie
 - Account status display
+- Disabled account login blocking
+- Disabled account session invalidation
 - Sign out
 - Login required before key interactions
 
@@ -1164,6 +1166,8 @@ For a real deployed social network, strengthen the current custom auth with:
 - Admin action feedback for user edits, status changes, and post moderation actions
 - Delete confirmation for destructive admin post deletion
 - Admin mutation-level authorization checks for user edit/status and post moderation server actions
+- Disabled users are blocked from regular login and admin login
+- Existing disabled-user sessions are invalidated by the current-user lookup
 
 ## Partially Implemented
 - Feed persistence: user-created posts persist in PostgreSQL, while Reddit/YouTube content remains externally sourced and is mirrored only for interaction persistence
@@ -1213,7 +1217,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Follow data filters the database-backed Following feed, but does not yet personalize Reddit or YouTube content
 - Chat and live-room features are currently hidden and tracked as backlog items
 - Admin access is controlled by an `ADMIN_EMAILS` allowlist instead of a database-backed role field
-- Admin management pages include search, pagination, server-action authorization checks, user status/edit controls, and post moderation controls, but disabled-user enforcement remains backlog
+- Admin management pages include search, pagination, server-action authorization checks, user status/edit controls, post moderation controls, and disabled-user enforcement
 - Trend keywords are displayed, but there is no approval workflow or content suggestion management yet
 
 ---
@@ -1222,7 +1226,6 @@ For a real deployed social network, strengthen the current custom auth with:
 
 - Add admin-only management API routes with authorization checks
 - Add database-backed admin roles
-- Add stronger enforcement for disabled user accounts across login and posting flows
 - Add trend approval/featured workflows using the existing keyword analysis utility
 - Add AI-style suggestion approval, dismissal, and reuse workflows
 - Add richer integration health cards for Reddit and YouTube
@@ -1248,8 +1251,8 @@ For a real deployed social network, strengthen the current custom auth with:
 The next development branch should focus on the management functionality required by the new assignment question.
 
 ## Priority 1: Admin Management Hardening
-- Enforce disabled user status in login and posting workflows
 - Move admin mutations into dedicated API/server-action helpers where useful
+- Add clearer disabled-account UI messaging after a previously logged-in session is invalidated
 
 ## Priority 2: Database-Backed Admin Roles
 - Add a user role or admin flag to Prisma
