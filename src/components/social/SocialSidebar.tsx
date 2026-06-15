@@ -83,7 +83,7 @@ export function SocialSidebar({ trends, source }: SocialSidebarProps) {
           <TrendTags trends={trends} />
         </div>
         <p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-[#8a7d73]">
-          Source: {source === "reddit" ? "Live Reddit feed" : "Fallback demo feed"}
+          Source: {source === "reddit" ? "Live Reddit feed" : "Curated community feed"}
         </p>
       </section>
     </aside>

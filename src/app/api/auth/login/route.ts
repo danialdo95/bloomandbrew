@@ -5,6 +5,7 @@ import {
   DISABLED_ACCOUNT_MESSAGE,
   getUserFollowStats,
   isActiveUser,
+  isAdminUser,
   toAuthUser,
   verifyPassword,
 } from "@/lib/auth";
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     user: {
       ...toAuthUser(user),
+      isAdmin: isAdminUser(user),
       stats,
     },
   });

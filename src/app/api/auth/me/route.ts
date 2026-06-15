@@ -5,6 +5,7 @@ import {
   getCurrentUser,
   getCurrentUserResult,
   getUserFollowStats,
+  isAdminUser,
   toAuthUser,
 } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -33,6 +34,7 @@ export async function GET() {
   return NextResponse.json({
     user: {
       ...toAuthUser(user),
+      isAdmin: isAdminUser(user),
       stats,
     },
   });
@@ -77,6 +79,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({
       user: {
         ...toAuthUser(updatedUser),
+        isAdmin: isAdminUser(updatedUser),
         stats,
       },
     });

@@ -53,6 +53,7 @@ export function FeedPost({
   const isBusy = Boolean(pendingAction);
   const shareUrl = getShareUrl(post);
   const shareText = `${post.content}\n\n${shareUrl}`;
+  const sourceBadge = getPostSourceBadge(post);
 
   async function copyShareLink() {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -186,6 +187,11 @@ export function FeedPost({
             )}{" "}
             · {post.location}
           </p>
+          <span
+            className={`mt-3 inline-flex rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.1em] ${sourceBadge.className}`}
+          >
+            {sourceBadge.label}
+          </span>
           <p className="mt-3 whitespace-pre-wrap text-base leading-7 text-[#211f1d]">
             {post.content}
           </p>
@@ -527,4 +533,32 @@ function getShareUrl(post: SocialPost) {
   }
 
   return `${window.location.origin}/users/${post.username}#${post.id}`;
+}
+
+function getPostSourceBadge(post: SocialPost) {
+  if (post.sourceLabel?.toLowerCase().includes("curated")) {
+    return {
+      label: "Curated",
+      className: "bg-[#fff176] text-[#211f1d]",
+    };
+  }
+
+  if (post.source === "youtube") {
+    return {
+      label: "YouTube",
+      className: "bg-[#fbe6e1] text-[#a43f4f]",
+    };
+  }
+
+  if (post.source === "reddit") {
+    return {
+      label: "Reddit",
+      className: "bg-[#e7f6df] text-[#2f6336]",
+    };
+  }
+
+  return {
+    label: "Bloom",
+    className: "bg-[#f7c6cf] text-[#211f1d]",
+  };
 }

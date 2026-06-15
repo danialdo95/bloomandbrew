@@ -4,6 +4,7 @@ import {
   createSession,
   createUniqueUsername,
   hashPassword,
+  isAdminUser,
   toAuthUser,
 } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -65,6 +66,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     user: {
       ...toAuthUser(user),
+      isAdmin: isAdminUser(user),
       stats: {
         followers: 0,
         following: 0,
