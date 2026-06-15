@@ -1047,6 +1047,7 @@ src/
       SocialSidebar.tsx
       SuggestedFollows.tsx
       useFeedPosts.ts
+      usePostActions.ts
       useSocialSession.ts
   lib/
     auth.ts
@@ -1207,6 +1208,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Optimized feed interaction queries to use database counts and viewer-scoped lookups instead of loading all like/share rows
 - Auth/session state extracted from `SocialApp.tsx` into `useSocialSession`
 - Feed loading, external sync, source status, and new-post polling extracted into `useFeedPosts`
+- Post publishing, reactions, saving, sharing, commenting, and delete confirmation state extracted into `usePostActions`
 - Public feed action labels keep consistent Like, Share, Save, and Comment wording while active state is shown visually
 
 ## Partially Implemented
