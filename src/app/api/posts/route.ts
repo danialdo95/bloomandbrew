@@ -24,9 +24,10 @@ function toSocialPost(post: {
   savedBy: {
     userIdentifier: string;
   }[];
-  shares: {
-    userIdentifier: string;
-  }[];
+  _count: {
+    likes: number;
+    shares: number;
+  };
   author: {
     name: string;
     username: string;
@@ -50,8 +51,8 @@ function toSocialPost(post: {
     filter: post.filter,
     location: post.location ?? "Bloom & Brew Social",
     createdAt: post.createdAt.toISOString(),
-    likes: post.likes.length,
-    shares: post.shares.length,
+    likes: post._count.likes,
+    shares: post._count.shares,
     comments: post.comments.map((comment) => ({
       id: comment.id,
       author: comment.authorName,
@@ -69,27 +70,6 @@ export async function GET(request: Request) {
   const user = await getCurrentUser();
   const viewer = user?.id ?? searchParams.get("viewer") ?? undefined;
   const feed = searchParams.get("feed");
- const where =
-  feed === "following" && user
-    ? {
-        status: "VISIBLE",
-        authorId: {
-          in: [
-            user.id,
-            ...(await prisma.follow.findMany({
-              where: {
-                followerId: user.id,
-              },
-              select: {
-                followingId: true,
-              },
-            })).map((follow) => follow.followingId),
-          ],
-        },
-      }
-    : {
-        status: "VISIBLE",
-      };
 
   if (feed === "following" && !user) {
     return NextResponse.json(
@@ -97,6 +77,29 @@ export async function GET(request: Request) {
       { status: 401 },
     );
   }
+
+  const followingIds = feed === "following" && user
+    ? (
+        await prisma.follow.findMany({
+          where: {
+            followerId: user.id,
+          },
+          select: {
+            followingId: true,
+          },
+        })
+      ).map((follow) => follow.followingId)
+    : [];
+  const where = feed === "following" && user
+    ? {
+        status: "VISIBLE",
+        authorId: {
+          in: [user.id, ...followingIds],
+        },
+      }
+    : {
+        status: "VISIBLE",
+      };
 
   const posts = await prisma.post.findMany({
     where,
@@ -107,9 +110,28 @@ export async function GET(request: Request) {
           createdAt: "asc",
         },
       },
-      likes: true,
-      savedBy: true,
-      shares: true,
+      likes: {
+        where: {
+          userIdentifier: viewer ?? "",
+        },
+        select: {
+          userIdentifier: true,
+        },
+      },
+      savedBy: {
+        where: {
+          userIdentifier: viewer ?? "",
+        },
+        select: {
+          userIdentifier: true,
+        },
+      },
+      _count: {
+        select: {
+          likes: true,
+          shares: true,
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -163,9 +185,28 @@ export async function POST(request: Request) {
     include: {
       author: true,
       comments: true,
-      likes: true,
-      savedBy: true,
-      shares: true,
+      likes: {
+        where: {
+          userIdentifier: user.id,
+        },
+        select: {
+          userIdentifier: true,
+        },
+      },
+      savedBy: {
+        where: {
+          userIdentifier: user.id,
+        },
+        select: {
+          userIdentifier: true,
+        },
+      },
+      _count: {
+        select: {
+          likes: true,
+          shares: true,
+        },
+      },
     },
   });
 

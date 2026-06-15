@@ -1,5 +1,5 @@
 import type { RedditPost } from "@/types/reddit";
-import type { SocialPost, SocialProfile, SuggestedPerson } from "@/types/social";
+import type { SocialPost, SocialProfile } from "@/types/social";
 import type { CSSProperties } from "react";
 
 export const defaultProfile: SocialProfile = {
@@ -9,27 +9,6 @@ export const defaultProfile: SocialProfile = {
   location: "Kuala Lumpur",
   avatar: "BB",
 };
-
-export const suggestedPeople: SuggestedPerson[] = [
-  {
-    name: "Petal Notes",
-    username: "petalnotes",
-    bio: "Bouquet styling and seasonal color palettes.",
-    avatar: "PN",
-  },
-  {
-    name: "Slow Bar Daily",
-    username: "slowbar",
-    bio: "Cafe interiors, espresso bars, and quiet corners.",
-    avatar: "SB",
-  },
-  {
-    name: "Latte Story",
-    username: "lattestory",
-    bio: "Daily latte art practice and milk texture experiments.",
-    avatar: "LS",
-  },
-];
 
 export const filterClasses: Record<string, string> = {
   Natural: "",

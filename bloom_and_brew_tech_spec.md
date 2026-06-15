@@ -1031,14 +1031,12 @@ src/
     page.tsx
   components/
     DiscoverFeed.tsx
-    GalleryGrid.tsx
     Navbar.tsx
     PollCard.tsx
     PostCard.tsx
     SocialApp.tsx
     StatCard.tsx
     TrendTags.tsx
-    YouTubeSuggestion.tsx
     social/
       AuthModal.tsx
       FeedPost.tsx
@@ -1203,6 +1201,8 @@ For a real deployed social network, strengthen the current custom auth with:
 - Disabled users are blocked from regular login and admin login
 - Existing disabled-user sessions are invalidated by the current-user lookup
 - The app shows a themed disabled-account popup when an existing session is invalidated
+- Code-quality cleanup for unused legacy components and unused demo types/data
+- Optimized feed interaction queries to use database counts and viewer-scoped lookups instead of loading all like/share rows
 
 ## Partially Implemented
 - Feed persistence: user-created posts persist in PostgreSQL, while Reddit/YouTube content remains externally sourced and is mirrored only for interaction persistence

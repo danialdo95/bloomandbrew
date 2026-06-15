@@ -50,15 +50,22 @@ export async function upsertExternalPost(post: ExternalPostPayload) {
 }
 
 export async function getExternalPostStats(postId: string, viewer?: string) {
-  const [likes, saved, comments, shares] = await Promise.all([
-    prisma.externalLike.findMany({
+  const [likes, liked, saved, comments, shares] = await Promise.all([
+    prisma.externalLike.count({
       where: {
         externalPostId: postId,
       },
-      select: {
-        userIdentifier: true,
-      },
     }),
+    viewer
+      ? prisma.externalLike.findUnique({
+          where: {
+            externalPostId_userIdentifier: {
+              externalPostId: postId,
+              userIdentifier: viewer,
+            },
+          },
+        })
+      : null,
     viewer
       ? prisma.externalSavedPost.findUnique({
           where: {
@@ -85,9 +92,9 @@ export async function getExternalPostStats(postId: string, viewer?: string) {
   ]);
 
   return {
-    likes: likes.length,
+    likes,
     shares,
-    liked: viewer ? likes.some((like) => like.userIdentifier === viewer) : false,
+    liked: Boolean(liked),
     bookmarked: Boolean(saved),
     comments: comments.map((comment) => ({
       id: comment.id,

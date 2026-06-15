@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AuthModal } from "@/components/social/AuthModal";
 import { FeedPost, type FeedPostPendingAction } from "@/components/social/FeedPost";
@@ -349,14 +349,25 @@ export function SocialApp({
     });
   }
 
-  function handleDisabledAccount(message: string) {
-    setCurrentUser(null);
-    setProfile(defaultProfile);
-    setFeedMode("for-you");
-    setAuthOpen(false);
-    setAuthError("");
-    setDisabledAccountMessage(message);
-  }
+  const handleFeedModeChange = useCallback((mode: FeedMode) => {
+    setFeedMode(mode);
+
+    if (mode !== "for-you") {
+      setNewPostCount(0);
+    }
+  }, []);
+
+  const handleDisabledAccount = useCallback(
+    (message: string) => {
+      setCurrentUser(null);
+      setProfile(defaultProfile);
+      handleFeedModeChange("for-you");
+      setAuthOpen(false);
+      setAuthError("");
+      setDisabledAccountMessage(message);
+    },
+    [handleFeedModeChange],
+  );
 
   useEffect(() => {
     async function loadSession() {
@@ -380,7 +391,7 @@ export function SocialApp({
     }
 
     loadSession();
-  }, []);
+  }, [handleDisabledAccount]);
 
   useEffect(() => {
     const authError = new URLSearchParams(window.location.search).get("authError");
@@ -389,9 +400,11 @@ export function SocialApp({
       return;
     }
 
-    setAuthMode("signin");
-    setAuthOpen(true);
-    setAuthError(authError);
+    queueMicrotask(() => {
+      setAuthMode("signin");
+      setAuthOpen(true);
+      setAuthError(authError);
+    });
 
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.delete("authError");
@@ -423,7 +436,7 @@ export function SocialApp({
     return () => {
       window.removeEventListener("focus", verifySession);
     };
-  }, [currentUser]);
+  }, [currentUser, handleDisabledAccount]);
 
   useEffect(() => {
     let active = true;
@@ -711,7 +724,6 @@ export function SocialApp({
 
   useEffect(() => {
     if (feedMode !== "for-you" || !latestBloomPostAt) {
-      setNewPostCount(0);
       return;
     }
 
@@ -959,7 +971,7 @@ export function SocialApp({
       });
       setCurrentUser(null);
       setProfile(defaultProfile);
-      setFeedMode("for-you");
+      handleFeedModeChange("for-you");
       addNotification("Signed out of your account.");
     } finally {
       setIsSigningOut(false);
@@ -1643,7 +1655,7 @@ export function SocialApp({
                 <button
                   key={mode}
                   type="button"
-                  onClick={() => setFeedMode(mode)}
+                  onClick={() => handleFeedModeChange(mode)}
                   className={`h-11 rounded-[6px] text-sm font-black transition ${
                     feedMode === mode
                       ? "bg-[#211f1d] text-white"
