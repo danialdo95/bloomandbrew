@@ -219,7 +219,7 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Expandable long post content with Read more and Show less controls
 - Stable responsive media framing to reduce feed layout movement
 - Contextual Following-feed empty states with a direct sign-in action
-- Non-blocking compact refresh feedback while existing posts remain visible
+- Full skeleton-card loading state while feed sources are being combined or refreshed
 - Text post composer
 - Media URL attachment for image links and YouTube links
 - Media preview validation before publishing posts with media links
@@ -1288,7 +1288,7 @@ The public feed UX hardening milestone is now implemented on the current feature
 - Check for newly available Bloom posts through `GET /api/posts/updates`
 - Show a floating new-post button below the navbar offset so users can refresh the feed without automatic feed jumps
 - Use compact icon-and-count actions, responsive comment controls, and expandable long-form post content
-- Preserve visible posts during background refreshes and show contextual empty states for Following
+- Show skeleton cards during feed refreshes and contextual empty states after Following loads
 
 ## Priority 1: Admin Management Hardening
 - Move admin mutations into dedicated API/server-action helpers where useful

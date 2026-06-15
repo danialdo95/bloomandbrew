@@ -776,7 +776,7 @@ export function SocialApp({
   }, [posts]);
 
   const isFeedBusy = isFeedLoading || isExternalFeedLoading;
-  const showFeedSkeletons = isFeedBusy && posts.length === 0;
+  const showFeedSkeletons = isFeedBusy;
 
   function addNotification(text: string) {
     const optimisticNotification = {
@@ -1605,7 +1605,7 @@ export function SocialApp({
   }
 
   return (
-    <main className="overflow-x-hidden bg-[#fffaf6]">
+    <main className="overflow-x-clip bg-[#fffaf6]">
       <SocialHero
         isAuthenticated={isAuthenticated}
         profile={profile}
@@ -1686,7 +1686,7 @@ export function SocialApp({
             <button
               type="button"
               onClick={refreshFeedFromNotice}
-              className="sticky top-28 z-30 mx-auto flex items-center gap-2 rounded-full border border-[#eadfd4] bg-[#211f1d] px-5 py-3 text-sm font-black text-white shadow-[0_16px_48px_rgba(33,31,29,0.22)] transition hover:bg-[#c45572] md:top-32"
+              className="sticky top-28 z-30 mx-auto flex max-w-[calc(100vw-2rem)] items-center gap-2 whitespace-nowrap rounded-full border border-[#eadfd4] bg-[#211f1d] px-5 py-3 text-sm font-black text-white shadow-[0_16px_48px_rgba(33,31,29,0.22)] transition hover:bg-[#c45572] md:top-32"
               aria-live="polite"
             >
               <span className="h-2 w-2 rounded-full bg-[#fff176]" />
@@ -1696,28 +1696,20 @@ export function SocialApp({
 
           {isFeedBusy ? (
             <div
-              className={`flex items-center gap-2 border border-[#eadfd4] bg-white text-sm font-black text-[#6f6259] shadow-[0_8px_24px_rgba(64,45,35,0.06)] ${
-                posts.length
-                  ? "mx-auto w-fit rounded-full px-4 py-2"
-                  : "rounded-[6px] px-5 py-4"
-              }`}
+              className="flex items-center gap-3 rounded-[6px] border border-[#eadfd4] bg-white px-5 py-4 text-sm font-black text-[#6f6259] shadow-[0_8px_24px_rgba(64,45,35,0.06)]"
               aria-live="polite"
               aria-busy="true"
             >
               <LoadingSpinner className="text-[#c45572]" />
               {feedMode === "following"
-                ? posts.length
-                  ? "Checking for following updates..."
-                  : "Loading your following feed..."
-                : posts.length
-                  ? "Checking for fresh posts..."
-                  : "Loading Bloom, Reddit, and YouTube posts..."}
+                ? "Loading your following feed..."
+                : "Loading Bloom, Reddit, and YouTube posts..."}
             </div>
           ) : null}
 
           {showFeedSkeletons ? <FeedSkeletonList /> : null}
 
-          {posts.length ? (
+          {!showFeedSkeletons && posts.length ? (
             posts.map((post) => (
               <FeedPost
                 key={post.id}
@@ -1741,7 +1733,7 @@ export function SocialApp({
                 }}
               />
             ))
-          ) : (
+          ) : !showFeedSkeletons ? (
             <div className="rounded-[6px] border border-dashed border-[#d8c8bc] bg-white p-8 text-center shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
               <h2 className="text-xl font-black text-[#211f1d]">
                 {feedMode === "following"
@@ -1767,7 +1759,7 @@ export function SocialApp({
                 </button>
               ) : null}
             </div>
-          )}
+          ) : null}
         </section>
 
         <SocialSidebar
