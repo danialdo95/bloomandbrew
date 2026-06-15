@@ -224,6 +224,7 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Comment system
 - Share counter
 - Save/bookmark state
+- Themed delete confirmation modal for deleting a user's own feed posts
 - Embedded YouTube videos inside feed posts
 - Composer preview for pasted YouTube watch, Shorts, embed, live, and youtu.be links
 - Composer blocks post publishing when a pasted media link cannot be previewed
@@ -1123,6 +1124,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Post source badges for Bloom, Reddit, YouTube, and curated fallback content
 - Floating live new-post indicator for newly available Bloom posts
 - `GET /api/posts/updates` lightweight feed update check endpoint
+- Themed delete confirmation modal for user-owned Bloom feed posts
 - Database-backed sign in/sign up modal
 - Google OAuth sign in through `/api/auth/oauth/google/start`
 - Google OAuth callback and account linking through `/api/auth/oauth/google/callback`
