@@ -10,6 +10,7 @@ import { ProfilePanel } from "@/components/social/ProfilePanel";
 import { SocialHero } from "@/components/social/SocialHero";
 import { SocialSidebar } from "@/components/social/SocialSidebar";
 import { SuggestedFollows } from "@/components/social/SuggestedFollows";
+import { useCurrentLocation as useCurrentLocationHook } from "@/components/social/useCurrentLocation";
 import {
   type FeedMode,
   type FeedSourceState,
@@ -18,16 +19,16 @@ import {
   useFeedPosts,
 } from "@/components/social/useFeedPosts";
 import { canDeletePost, usePostActions } from "@/components/social/usePostActions";
+import { useSocialNotifications } from "@/components/social/useSocialNotifications";
 import { useSocialSession } from "@/components/social/useSocialSession";
+import { useSuggestedFollows } from "@/components/social/useSuggestedFollows";
 import {
   seedSocialPosts,
 } from "@/lib/social";
 import { getTrendingKeywords } from "@/lib/trends";
 import type { RedditPost } from "@/types/reddit";
 import type {
-  NotificationItem,
   SocialPost,
-  SuggestedPerson,
 } from "@/types/social";
 
 type SocialAppProps = {
@@ -36,14 +37,6 @@ type SocialAppProps = {
   youtubePosts: SocialPost[];
   youtubeSource: "youtube" | "fallback";
 };
-
-const initialNotifications: NotificationItem[] = [
-  {
-    id: "welcome",
-    text: "Welcome back. Your Bloom & Brew feed is ready.",
-    createdAt: "Now",
-  },
-];
 
 function FeedSourceStatusStrip({
   feedMode,
@@ -194,65 +187,13 @@ export function SocialApp({
     () => sortPostsByAge([...initialRedditPosts, ...initialYouTubePosts]),
     [initialRedditPosts, initialYouTubePosts],
   );
-  const [suggestedFollows, setSuggestedFollows] = useState<SuggestedPerson[]>([]);
-  const [notifications, setNotifications] =
-    useState<NotificationItem[]>(initialNotifications);
-  const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false);
-  const [isLocating, setIsLocating] = useState(false);
   const [feedRefreshKey, setFeedRefreshKey] = useState(0);
-  const [pendingFollowId, setPendingFollowId] = useState<string | null>(null);
   const [feedMode, setFeedMode] = useState<FeedMode>("for-you");
-  const [followRefreshKey, setFollowRefreshKey] = useState(0);
   const feedTopRef = useRef<HTMLElement | null>(null);
-  const isAuthenticatedRef = useRef(false);
+  const notificationHandlerRef = useRef<(message: string) => void>(() => {});
 
-  const addNotification = useCallback((text: string) => {
-    const optimisticNotification = {
-      id: crypto.randomUUID(),
-      text,
-      createdAt: "Now",
-    };
-
-    setNotifications((current) => [
-      optimisticNotification,
-      ...current.slice(0, 19),
-    ]);
-
-    if (!isAuthenticatedRef.current) {
-      return;
-    }
-
-    fetch("/api/notifications", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ text }),
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          return;
-        }
-
-        const data = (await response.json()) as {
-          notification?: NotificationItem;
-        };
-
-        if (!data.notification) {
-          return;
-        }
-
-        setNotifications((current) =>
-          current.map((notification) =>
-            notification.id === optimisticNotification.id
-              ? data.notification as NotificationItem
-              : notification,
-          ),
-        );
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+  const addNotification = useCallback((message: string) => {
+    notificationHandlerRef.current(message);
   }, []);
 
   const resetSessionFeed = useCallback(() => {
@@ -290,9 +231,25 @@ export function SocialApp({
     onSessionReset: resetSessionFeed,
   });
 
+  const { addNotification: addSocialNotification } =
+    useSocialNotifications(isAuthenticated);
+
   useEffect(() => {
-    isAuthenticatedRef.current = isAuthenticated;
-  }, [isAuthenticated]);
+    notificationHandlerRef.current = addSocialNotification;
+  }, [addSocialNotification]);
+
+  const {
+    followRefreshKey,
+    isSuggestionsLoading,
+    pendingFollowId,
+    suggestedFollows,
+    toggleFollow,
+  } = useSuggestedFollows({
+    addNotification,
+    isAuthenticated,
+    requireAuth,
+    setCurrentUser,
+  });
 
   const {
     feedSources,
@@ -358,70 +315,14 @@ export function SocialApp({
     setPosts,
   });
 
-  useEffect(() => {
-    let active = true;
-
-    async function loadNotifications() {
-      if (!isAuthenticated) {
-        setNotifications(initialNotifications);
-        return;
-      }
-
-      try {
-        const response = await fetch("/api/notifications");
-        const data = (await response.json()) as {
-          notifications?: NotificationItem[];
-        };
-
-        if (active && response.ok) {
-          setNotifications(data.notifications?.length ? data.notifications : initialNotifications);
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    }
-
-    loadNotifications();
-
-    return () => {
-      active = false;
-    };
-  }, [isAuthenticated]);
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadSuggestedFollows() {
-      if (!isAuthenticated) {
-        setSuggestedFollows([]);
-        setIsSuggestionsLoading(false);
-        return;
-      }
-
-      setIsSuggestionsLoading(true);
-
-      try {
-        const response = await fetch("/api/users/suggestions");
-        const data = (await response.json()) as { people?: SuggestedPerson[] };
-
-        if (active) {
-          setSuggestedFollows(data.people ?? []);
-        }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        if (active) {
-          setIsSuggestionsLoading(false);
-        }
-      }
-    }
-
-    loadSuggestedFollows();
-
-    return () => {
-      active = false;
-    };
-  }, [isAuthenticated]);
+  const {
+    isLocating,
+    useCurrentLocation,
+  } = useCurrentLocationHook({
+    addNotification,
+    requireAuth,
+    setLocation,
+  });
 
   const trends = useMemo(() => {
     return getTrendingKeywords(
@@ -453,111 +354,6 @@ export function SocialApp({
       });
     });
     addNotification("Refreshing your feed...");
-  }
-
-  useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent("bloom-notifications", {
-        detail: notifications,
-      }),
-    );
-  }, [notifications]);
-
-  async function toggleFollow(person: SuggestedPerson) {
-    if (!requireAuth("follow creators")) {
-      return;
-    }
-
-    if (!person.id) {
-      addNotification("This suggested creator is not available yet.");
-      return;
-    }
-
-    if (pendingFollowId) {
-      return;
-    }
-
-    setPendingFollowId(person.id);
-
-    try {
-      const response = await fetch(`/api/users/${person.id}/follow`, {
-        method: "POST",
-      });
-      const data = (await response.json()) as {
-        isFollowing?: boolean;
-        username?: string;
-        error?: string;
-      };
-
-      if (!response.ok || typeof data.isFollowing !== "boolean") {
-        throw new Error(data.error ?? "Follow status could not be updated.");
-      }
-
-      setSuggestedFollows((current) =>
-        current.map((item) =>
-          item.id === person.id ? { ...item, isFollowing: data.isFollowing } : item,
-        ),
-      );
-      setCurrentUser((user) => {
-        if (!user) {
-          return user;
-        }
-
-        const currentFollowing = user.stats?.following ?? 0;
-
-        return {
-          ...user,
-          stats: {
-            followers: user.stats?.followers ?? 0,
-            following: data.isFollowing
-              ? currentFollowing + 1
-              : Math.max(currentFollowing - 1, 0),
-          },
-        };
-      });
-      setFollowRefreshKey((current) => current + 1);
-      addNotification(
-        data.isFollowing
-          ? `You are now following @${data.username ?? person.username}.`
-          : `You unfollowed @${data.username ?? person.username}.`,
-      );
-    } catch (error) {
-      addNotification(
-        error instanceof Error ? error.message : "Follow status could not be updated.",
-      );
-    } finally {
-      setPendingFollowId(null);
-    }
-  }
-
-  function useCurrentLocation() {
-    if (!requireAuth("tag your location")) {
-      return;
-    }
-
-    if (isLocating) {
-      return;
-    }
-
-    if (!navigator.geolocation) {
-      addNotification("Geolocation is not available in this browser.");
-      return;
-    }
-
-    setIsLocating(true);
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const nextLocation = `${position.coords.latitude.toFixed(3)}, ${position.coords.longitude.toFixed(3)}`;
-        setLocation(nextLocation);
-        addNotification("Location tag updated.");
-        setIsLocating(false);
-      },
-      () => {
-        addNotification("Location permission was not granted.");
-        setIsLocating(false);
-      },
-    );
   }
 
   return (

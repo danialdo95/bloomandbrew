@@ -1046,9 +1046,12 @@ src/
       SocialHero.tsx
       SocialSidebar.tsx
       SuggestedFollows.tsx
+      useCurrentLocation.ts
       useFeedPosts.ts
       usePostActions.ts
+      useSocialNotifications.ts
       useSocialSession.ts
+      useSuggestedFollows.ts
   lib/
     auth.ts
     external-posts.ts
@@ -1209,6 +1212,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Auth/session state extracted from `SocialApp.tsx` into `useSocialSession`
 - Feed loading, external sync, source status, and new-post polling extracted into `useFeedPosts`
 - Post publishing, reactions, saving, sharing, commenting, and delete confirmation state extracted into `usePostActions`
+- Notification loading, optimistic notification persistence, suggested follow management, and geolocation tagging extracted into focused hooks
 - Public feed action labels keep consistent Like, Share, Save, and Comment wording while active state is shown visually
 
 ## Partially Implemented
