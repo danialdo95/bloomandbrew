@@ -3,6 +3,8 @@ import { getRedditFeed } from "@/lib/reddit";
 import { getTrendingKeywords } from "@/lib/trends";
 import type { RedditPost } from "@/types/reddit";
 
+export const ADMIN_PAGE_SIZE = 10;
+
 export function formatAdminDate(value: Date | string) {
   return new Intl.DateTimeFormat("en", {
     month: "short",
@@ -13,6 +15,25 @@ export function formatAdminDate(value: Date | string) {
 
 export function truncateAdminText(value: string, length = 92) {
   return value.length > length ? `${value.slice(0, length - 1)}...` : value;
+}
+
+export function normalizeAdminPage(value?: string) {
+  const page = Number(value ?? 1);
+
+  return Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+}
+
+export function getAdminPagination(total: number, page: number) {
+  const totalPages = Math.max(Math.ceil(total / ADMIN_PAGE_SIZE), 1);
+
+  return {
+    page,
+    pageSize: ADMIN_PAGE_SIZE,
+    total,
+    totalPages,
+    hasPrevious: page > 1,
+    hasNext: page < totalPages,
+  };
 }
 
 function toTrendPost(id: string, title: string, createdAt: Date | string): RedditPost {
@@ -75,42 +96,116 @@ export async function getAdminOverview() {
   };
 }
 
-export async function getAdminUsers() {
-  return prisma.user.findMany({
-    orderBy: {
-      createdAt: "desc",
-    },
-    take: 20,
-    include: {
-      _count: {
-        select: {
-          posts: true,
-          followers: true,
-          following: true,
+export async function getAdminUsers({
+  page = 1,
+  query = "",
+}: {
+  page?: number;
+  query?: string;
+} = {}) {
+  const search = query.trim();
+  const where = search
+    ? {
+        OR: [
+          { name: { contains: search, mode: "insensitive" as const } },
+          { username: { contains: search, mode: "insensitive" as const } },
+          { email: { contains: search, mode: "insensitive" as const } },
+          { location: { contains: search, mode: "insensitive" as const } },
+        ],
+      }
+    : undefined;
+
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip: (page - 1) * ADMIN_PAGE_SIZE,
+      take: ADMIN_PAGE_SIZE,
+      include: {
+        _count: {
+          select: {
+            posts: true,
+            followers: true,
+            following: true,
+          },
         },
       },
+    }),
+    prisma.user.count({ where }),
+  ]);
+
+  return {
+    users,
+    pagination: getAdminPagination(total, page),
+  };
+}
+
+export async function getAdminUserById(userId: string) {
+  return prisma.user.findUnique({
+    where: {
+      id: userId,
     },
   });
 }
 
-export async function getAdminPosts() {
-  return prisma.post.findMany({
-    orderBy: {
-      createdAt: "desc",
-    },
-    take: 20,
-    include: {
-      author: true,
-      _count: {
-        select: {
-          comments: true,
-          likes: true,
-          savedBy: true,
-          shares: true,
+export async function getAdminPosts({
+  page = 1,
+  query = "",
+  status = "all",
+}: {
+  page?: number;
+  query?: string;
+  status?: string;
+} = {}) {
+  const search = query.trim();
+  const statusFilter = status.toUpperCase();
+  const statusWhere = statusFilter === "VISIBLE" || statusFilter === "HIDDEN"
+    ? { status: statusFilter }
+    : {};
+  const searchWhere = search
+    ? {
+        OR: [
+          { content: { contains: search, mode: "insensitive" as const } },
+          { community: { contains: search, mode: "insensitive" as const } },
+          { author: { name: { contains: search, mode: "insensitive" as const } } },
+          { author: { username: { contains: search, mode: "insensitive" as const } } },
+        ],
+      }
+    : {};
+  const where = {
+    ...statusWhere,
+    ...searchWhere,
+  };
+
+  const [posts, total] = await Promise.all([
+    prisma.post.findMany({
+      where,
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip: (page - 1) * ADMIN_PAGE_SIZE,
+      take: ADMIN_PAGE_SIZE,
+      include: {
+        author: true,
+        _count: {
+          select: {
+            comments: true,
+            likes: true,
+            savedBy: true,
+            shares: true,
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.post.count({ where }),
+  ]);
+
+  return {
+    posts,
+    pagination: getAdminPagination(total, page),
+  };
 }
 
 export async function getAdminTrends(limit = 10) {

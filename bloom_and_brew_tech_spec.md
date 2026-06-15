@@ -453,8 +453,8 @@ The dashboard will help platform managers monitor users, posts, trends, integrat
 
 | Module | Current Status |
 |---|---|
-| Users | View users and account metrics implemented; admin edit page and disable/reactivate status controls implemented |
-| Posts | View posts and engagement metrics implemented; hide/restore and delete moderation controls implemented; filtering remains backlog |
+| Users | View users and account metrics implemented; search, pagination, admin edit page, feedback messages, and disable/reactivate status controls implemented |
+| Posts | View posts and engagement metrics implemented; search, status filtering, pagination, hide/restore, delete confirmation, and delete moderation controls implemented |
 | Trends | View trend signals implemented; featured trend and approval workflows remain backlog |
 | AI Suggestions | Rule-style suggestion view implemented; approve, dismiss, reuse, and persistence workflows remain backlog |
 | Integrations | Integration status view implemented; richer API health/fallback diagnostics remain backlog |
@@ -1159,6 +1159,11 @@ For a real deployed social network, strengthen the current custom auth with:
 - Database-backed post moderation status field with `VISIBLE` and `HIDDEN` states
 - Admin post hide, restore, and delete moderation controls
 - Public Bloom post feed filters out hidden posts
+- Admin user search with paginated results
+- Admin post search and `VISIBLE`/`HIDDEN` status filtering with paginated results
+- Admin action feedback for user edits, status changes, and post moderation actions
+- Delete confirmation for destructive admin post deletion
+- Admin mutation-level authorization checks for user edit/status and post moderation server actions
 
 ## Partially Implemented
 - Feed persistence: user-created posts persist in PostgreSQL, while Reddit/YouTube content remains externally sourced and is mirrored only for interaction persistence
@@ -1171,15 +1176,14 @@ For a real deployed social network, strengthen the current custom auth with:
 - Geolocation: coordinate tagging only, no map/location search
 - Reddit source: public JSON endpoint with fallback data; OAuth/API credentials are currently deferred
 - Trend analysis: keyword extraction exists, but it is not yet connected to admin-managed content suggestions
-- User management dashboard: user metrics, edit controls, and disable/reactivate controls exist, but search/filter and stronger mutation authorization remain incomplete
-- Post management dashboard: post and engagement data, hide/restore, and delete controls exist, but search/filter and stronger mutation authorization remain incomplete
+- User management dashboard: user metrics, search, pagination, edit controls, disable/reactivate controls, and server-action authorization checks exist; dedicated admin management API routes remain incomplete
+- Post management dashboard: post and engagement data, search, status filtering, pagination, hide/restore, delete confirmation, delete controls, and server-action authorization checks exist; dedicated admin management API routes remain incomplete
 - Trend management dashboard: trend signals can be viewed, but approval/featured workflows are not complete
 - AI-assisted content suggestion workflow: suggestion view exists, but approval, dismissal, reuse, and persistence are not complete
 - Integration management dashboard: integration status view exists, but richer health/fallback diagnostics are not complete
 - Share analytics: share counters persist, but selected platform/method is not yet persisted for analytics
 
 ## Not Yet Implemented
-- Admin search and filter controls for users and posts
 - Admin-only management API mutation routes
 - Database-backed admin role field
 - Share analytics by platform/method
@@ -1209,7 +1213,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Follow data filters the database-backed Following feed, but does not yet personalize Reddit or YouTube content
 - Chat and live-room features are currently hidden and tracked as backlog items
 - Admin access is controlled by an `ADMIN_EMAILS` allowlist instead of a database-backed role field
-- Admin management pages include user status/edit controls and post moderation controls, but search/filter and stronger mutation-level authorization remain backlog
+- Admin management pages include search, pagination, server-action authorization checks, user status/edit controls, and post moderation controls, but disabled-user enforcement remains backlog
 - Trend keywords are displayed, but there is no approval workflow or content suggestion management yet
 
 ---
@@ -1219,7 +1223,6 @@ For a real deployed social network, strengthen the current custom auth with:
 - Add admin-only management API routes with authorization checks
 - Add database-backed admin roles
 - Add stronger enforcement for disabled user accounts across login and posting flows
-- Add admin search and filter controls for users and posts
 - Add trend approval/featured workflows using the existing keyword analysis utility
 - Add AI-style suggestion approval, dismissal, and reuse workflows
 - Add richer integration health cards for Reddit and YouTube
@@ -1245,10 +1248,8 @@ For a real deployed social network, strengthen the current custom auth with:
 The next development branch should focus on the management functionality required by the new assignment question.
 
 ## Priority 1: Admin Management Hardening
-- Add search/filter controls for users and posts
-- Protect management mutations with admin-only API authorization
 - Enforce disabled user status in login and posting workflows
-- Add confirmation or clear feedback for destructive post deletion
+- Move admin mutations into dedicated API/server-action helpers where useful
 
 ## Priority 2: Database-Backed Admin Roles
 - Add a user role or admin flag to Prisma
