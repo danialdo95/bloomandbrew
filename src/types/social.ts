@@ -54,12 +54,6 @@ export type NotificationItem = {
   createdAt: string;
 };
 
-export type ChatMessage = {
-  id: string;
-  from: "me" | "them";
-  text: string;
-};
-
 export type DemoUser = {
   id: string;
   email: string;

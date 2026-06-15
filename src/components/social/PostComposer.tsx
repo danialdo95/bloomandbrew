@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { LoadingSpinner } from "@/components/social/LoadingSpinner";
 import { filterClasses, filterStyles } from "@/lib/social";
@@ -8,6 +8,11 @@ import { getYouTubeVideoId, getYouTubeWatchUrl } from "@/lib/youtube-url";
 import type { SocialProfile } from "@/types/social";
 
 type MediaPreviewStatus = "empty" | "checking" | "ready" | "error";
+
+type ImagePreviewState = {
+  url: string;
+  status: Extract<MediaPreviewStatus, "ready" | "error">;
+};
 
 type PostComposerProps = {
   profile: SocialProfile;
@@ -43,10 +48,11 @@ export function PostComposer({
   const mediaUrl = imageUrl.trim();
   const youtubeVideoId = getYouTubeVideoId(mediaUrl);
   const youtubeUrl = youtubeVideoId ? getYouTubeWatchUrl(youtubeVideoId) : null;
-  const [imagePreviewStatus, setImagePreviewStatus] =
-    useState<MediaPreviewStatus>("empty");
+  const [imagePreviewState, setImagePreviewState] = useState<ImagePreviewState | null>(null);
   const hasMediaUrl = Boolean(mediaUrl);
   const isYouTubeHost = isYouTubeLink(mediaUrl);
+  const imagePreviewStatus =
+    imagePreviewState?.url === mediaUrl ? imagePreviewState.status : "checking";
   const mediaStatus: MediaPreviewStatus = !hasMediaUrl
     ? "empty"
     : youtubeVideoId
@@ -60,15 +66,6 @@ export function PostComposer({
     isYouTubeHost,
     youtubeVideoId,
   });
-
-  useEffect(() => {
-    if (!hasMediaUrl || youtubeVideoId || isYouTubeHost) {
-      setImagePreviewStatus(hasMediaUrl && isYouTubeHost ? "error" : "empty");
-      return;
-    }
-
-    setImagePreviewStatus("checking");
-  }, [hasMediaUrl, isYouTubeHost, mediaUrl, youtubeVideoId]);
 
   return (
     <div className="min-w-0 overflow-hidden rounded-[6px] border border-[#eadfd4] bg-white p-4 shadow-[0_8px_24px_rgba(64,45,35,0.06)] sm:p-5">
@@ -171,8 +168,8 @@ export function PostComposer({
               <img
                 src={mediaUrl}
                 alt=""
-                onLoad={() => setImagePreviewStatus("ready")}
-                onError={() => setImagePreviewStatus("error")}
+                onLoad={() => setImagePreviewState({ url: mediaUrl, status: "ready" })}
+                onError={() => setImagePreviewState({ url: mediaUrl, status: "error" })}
                 className={`max-h-64 w-full object-cover ${filterClasses[filter]}`}
                 style={filterStyles[filter] ?? filterStyles.Natural}
               />

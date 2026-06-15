@@ -1031,23 +1031,35 @@ src/
     page.tsx
   components/
     DiscoverFeed.tsx
-    GalleryGrid.tsx
     Navbar.tsx
     PollCard.tsx
     PostCard.tsx
     SocialApp.tsx
     StatCard.tsx
     TrendTags.tsx
-    YouTubeSuggestion.tsx
     social/
       AuthModal.tsx
+      DeletePostModal.tsx
+      DisabledAccountModal.tsx
+      FeedEmptyState.tsx
+      FeedLoadingNotice.tsx
+      FeedModeTabs.tsx
       FeedPost.tsx
+      FeedSkeletonList.tsx
+      FeedSourceStatusStrip.tsx
+      NewPostNotice.tsx
       PostComposer.tsx
       ProfilePanel.tsx
       PublicProfileFollowButton.tsx
       SocialHero.tsx
       SocialSidebar.tsx
       SuggestedFollows.tsx
+      useCurrentLocation.ts
+      useFeedPosts.ts
+      usePostActions.ts
+      useSocialNotifications.ts
+      useSocialSession.ts
+      useSuggestedFollows.ts
   lib/
     auth.ts
     external-posts.ts
@@ -1203,6 +1215,14 @@ For a real deployed social network, strengthen the current custom auth with:
 - Disabled users are blocked from regular login and admin login
 - Existing disabled-user sessions are invalidated by the current-user lookup
 - The app shows a themed disabled-account popup when an existing session is invalidated
+- Code-quality cleanup for unused legacy components and unused demo types/data
+- Optimized feed interaction queries to use database counts and viewer-scoped lookups instead of loading all like/share rows
+- Auth/session state extracted from `SocialApp.tsx` into `useSocialSession`
+- Feed loading, external sync, source status, and new-post polling extracted into `useFeedPosts`
+- Post publishing, reactions, saving, sharing, commenting, and delete confirmation state extracted into `usePostActions`
+- Notification loading, optimistic notification persistence, suggested follow management, and geolocation tagging extracted into focused hooks
+- Feed tabs, feed notices, empty state, source status strip, skeletons, and account/delete modals extracted into presentational components
+- Public feed action labels keep consistent Like, Share, Save, and Comment wording while active state is shown visually
 
 ## Partially Implemented
 - Feed persistence: user-created posts persist in PostgreSQL, while Reddit/YouTube content remains externally sourced and is mirrored only for interaction persistence

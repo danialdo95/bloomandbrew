@@ -283,7 +283,7 @@ export function FeedPost({
 
       <div className="grid grid-cols-4 border-y border-[#eadfd4] bg-[#fffdfb] px-1 text-[#6f6259] sm:px-3">
         <PostActionButton
-          label={post.liked ? "Unlike" : "Like"}
+          label="Like"
           count={post.likes}
           icon={post.liked ? "♥" : "♡"}
           active={post.liked}
@@ -294,13 +294,13 @@ export function FeedPost({
         <PostActionButton
           label="Share"
           count={post.shares}
-          icon="↗"
+          icon={<ForwardIcon />}
           loading={pendingAction === "share"}
           disabled={isBusy}
           onClick={() => setShareModalOpen(true)}
         />
         <PostActionButton
-          label={post.bookmarked ? "Remove saved post" : "Save"}
+          label="Save"
           icon={<BookmarkIcon filled={post.bookmarked} />}
           active={post.bookmarked}
           loading={pendingAction === "bookmark"}
@@ -478,6 +478,20 @@ function MessageBubbleIcon() {
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M5 18.25 3.75 21l3.8-1.2A8.8 8.8 0 1 0 5 18.25Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ForwardIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M14 7 20 12l-6 5v-3.25h-2.25c-3.2 0-5.6 1.25-7.75 4.25.55-5.25 3.35-8.75 7.75-8.75H14V7Z"
         stroke="currentColor"
         strokeWidth="1.8"
         strokeLinecap="round"
