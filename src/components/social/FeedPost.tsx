@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { LoadingSpinner } from "@/components/social/LoadingSpinner";
 import { filterClasses, filterStyles, getTimeLabel } from "@/lib/social";
@@ -43,6 +43,8 @@ export function FeedPost({
 }: FeedPostProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [contentExpanded, setContentExpanded] = useState(false);
+  const commentInputRef = useRef<HTMLInputElement | null>(null);
   const userCommentCount = post.comments.filter((comment) => !comment.system).length;
   const commentCount =
     post.source === "reddit" || post.source === "youtube"
@@ -54,6 +56,10 @@ export function FeedPost({
   const shareUrl = getShareUrl(post);
   const shareText = `${post.content}\n\n${shareUrl}`;
   const sourceBadge = getPostSourceBadge(post);
+  const contentCanCollapse = post.content.length > 260;
+  const visibleContent = contentCanCollapse && !contentExpanded
+    ? `${post.content.slice(0, 260).trimEnd()}...`
+    : post.content;
 
   async function copyShareLink() {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -143,8 +149,8 @@ export function FeedPost({
   }
 
   return (
-    <article className="rounded-[6px] border border-[#eadfd4] bg-white shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
-      <div className="flex items-start gap-3 p-5">
+    <article className="overflow-hidden rounded-[6px] border border-[#eadfd4] bg-white shadow-[0_8px_24px_rgba(64,45,35,0.06)] transition-shadow hover:shadow-[0_12px_32px_rgba(64,45,35,0.1)]">
+      <div className="flex items-start gap-3 px-4 pb-4 pt-5 sm:px-5">
         {isBloomPost ? (
           <Link
             href={profileHref}
@@ -159,7 +165,7 @@ export function FeedPost({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             {isBloomPost ? (
               <Link href={profileHref} className="font-black text-[#211f1d] hover:underline">
                 {post.author}
@@ -171,8 +177,13 @@ export function FeedPost({
             <span className="text-sm font-bold text-[#8a7d73]">
               · {getTimeLabel(post.createdAt)}
             </span>
+            <span
+              className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] ${sourceBadge.className}`}
+            >
+              {sourceBadge.label}
+            </span>
           </div>
-          <p className="mt-1 text-sm font-bold text-[#c45572]">
+          <p className="mt-1.5 text-xs font-bold leading-5 text-[#8a7d73] sm:text-sm">
             {post.source === "reddit" && post.externalUrl ? (
               <a
                 href={post.externalUrl}
@@ -187,14 +198,19 @@ export function FeedPost({
             )}{" "}
             · {post.location}
           </p>
-          <span
-            className={`mt-3 inline-flex rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.1em] ${sourceBadge.className}`}
-          >
-            {sourceBadge.label}
-          </span>
-          <p className="mt-3 whitespace-pre-wrap text-base leading-7 text-[#211f1d]">
-            {post.content}
+          <p className="mt-3 whitespace-pre-wrap text-[15px] leading-7 text-[#211f1d] sm:text-base">
+            {visibleContent}
           </p>
+          {contentCanCollapse ? (
+            <button
+              type="button"
+              onClick={() => setContentExpanded((current) => !current)}
+              className="mt-2 text-sm font-black text-[#c45572] transition hover:text-[#211f1d]"
+              aria-expanded={contentExpanded}
+            >
+              {contentExpanded ? "Show less" : "Read more"}
+            </button>
+          ) : null}
         </div>
         {canDelete ? (
           <div className="relative shrink-0">
@@ -230,7 +246,7 @@ export function FeedPost({
       </div>
 
       {post.youtubeVideoId ? (
-        <div className="px-5 pb-4">
+        <div className="px-4 pb-4 sm:px-5">
           <div className="overflow-hidden rounded-[6px] border border-[#eadfd4] bg-[#211f1d]">
             <iframe
               className="aspect-video w-full"
@@ -252,56 +268,52 @@ export function FeedPost({
           ) : null}
         </div>
       ) : post.imageUrl ? (
-        <div className="px-5 pb-4">
-          <div className="overflow-hidden rounded-[6px] border border-[#eadfd4] bg-[#fff8f2]">
+        <div className="px-4 pb-4 sm:px-5">
+          <div className="aspect-[4/3] overflow-hidden rounded-[6px] border border-[#eadfd4] bg-[#fff8f2] sm:aspect-video">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={post.imageUrl}
               alt=""
-              className={`max-h-[520px] w-full object-cover ${filterClasses[post.filter]}`}
+              className={`h-full w-full object-cover ${filterClasses[post.filter]}`}
               style={filterStyles[post.filter] ?? filterStyles.Natural}
             />
           </div>
         </div>
       ) : null}
 
-      <div className="grid grid-cols-4 border-y border-[#eadfd4] text-sm font-black text-[#6f6259]">
-        <button
-          type="button"
+      <div className="grid grid-cols-4 border-y border-[#eadfd4] bg-[#fffdfb] px-1 text-[#6f6259] sm:px-3">
+        <PostActionButton
+          label={post.liked ? "Unlike" : "Like"}
+          count={post.likes}
+          icon={post.liked ? "♥" : "♡"}
+          active={post.liked}
+          loading={pendingAction === "like"}
+          disabled={isBusy}
           onClick={() => onLike(post.id)}
+        />
+        <PostActionButton
+          label="Share"
+          count={post.shares}
+          icon="↗"
+          loading={pendingAction === "share"}
           disabled={isBusy}
-          className="flex items-center justify-center gap-2 px-3 py-3 transition hover:bg-[#fff8f2] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {pendingAction === "like" ? <LoadingSpinner className="h-3 w-3" /> : null}
-          {pendingAction === "like"
-            ? "Updating..."
-            : `${post.liked ? "Liked" : "Like"} · ${post.likes.toLocaleString()}`}
-        </button>
-        <button
-          type="button"
           onClick={() => setShareModalOpen(true)}
+        />
+        <PostActionButton
+          label={post.bookmarked ? "Remove saved post" : "Save"}
+          icon={<BookmarkIcon filled={post.bookmarked} />}
+          active={post.bookmarked}
+          loading={pendingAction === "bookmark"}
           disabled={isBusy}
-          className="flex items-center justify-center gap-2 px-3 py-3 transition hover:bg-[#fff8f2] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {pendingAction === "share" ? <LoadingSpinner className="h-3 w-3" /> : null}
-          {pendingAction === "share" ? "Sharing..." : `Share · ${post.shares}`}
-        </button>
-        <button
-          type="button"
           onClick={() => onBookmark(post.id)}
+        />
+        <PostActionButton
+          label="Comment"
+          count={commentCount}
+          icon={<MessageBubbleIcon />}
           disabled={isBusy}
-          className="flex items-center justify-center gap-2 px-3 py-3 transition hover:bg-[#fff8f2] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {pendingAction === "bookmark" ? <LoadingSpinner className="h-3 w-3" /> : null}
-          {pendingAction === "bookmark"
-            ? "Saving..."
-            : post.bookmarked
-              ? "Saved"
-              : "Save"}
-        </button>
-        <span className="px-3 py-3 text-center">
-          {commentCount} {commentCount === 1 ? "comment" : "comments"}
-        </span>
+          onClick={() => commentInputRef.current?.focus()}
+        />
       </div>
 
       {shareModalOpen ? (
@@ -372,26 +384,27 @@ export function FeedPost({
         </div>
       ) : null}
 
-      <div className="space-y-3 p-5">
+      <div className="space-y-3 px-4 py-4 sm:px-5 sm:py-5">
         {post.comments.slice(-3).map((comment) => (
           <div key={comment.id} className="rounded-[6px] bg-[#fff8f2] px-4 py-3">
             <p className="text-sm font-black text-[#211f1d]">{comment.author}</p>
             <p className="mt-1 text-sm leading-6 text-[#6f6259]">{comment.text}</p>
           </div>
         ))}
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <input
+            ref={commentInputRef}
             value={commentDraft}
             onChange={(event) => onCommentDraftChange(post.id, event.target.value)}
             placeholder="Write a comment..."
             disabled={pendingAction === "comment"}
-            className="h-10 flex-1 rounded-full border border-[#eadfd4] bg-[#fffaf6] px-4 text-sm font-bold"
+            className="h-11 min-w-0 flex-1 rounded-full border border-[#eadfd4] bg-[#fffaf6] px-4 text-sm font-bold outline-none transition focus:border-[#c45572] focus:bg-white"
           />
           <button
             type="button"
             onClick={() => onAddComment(post.id)}
             disabled={isBusy || !commentDraft.trim()}
-            className="flex min-w-20 items-center justify-center gap-2 rounded-full bg-[#211f1d] px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex h-11 min-w-20 items-center justify-center gap-2 rounded-full bg-[#211f1d] px-5 text-sm font-black text-white transition hover:bg-[#c45572] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pendingAction === "comment" ? <LoadingSpinner className="h-3 w-3" /> : null}
             {pendingAction === "comment" ? "Sending..." : "Send"}
@@ -399,6 +412,78 @@ export function FeedPost({
         </div>
       </div>
     </article>
+  );
+}
+
+function PostActionButton({
+  label,
+  count,
+  icon,
+  active = false,
+  loading = false,
+  disabled = false,
+  onClick,
+}: {
+  label: string;
+  count?: number;
+  icon: ReactNode;
+  active?: boolean;
+  loading?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  const countLabel = typeof count === "number" ? count.toLocaleString() : "";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={countLabel ? `${label}, ${countLabel}` : label}
+      className={`flex h-14 min-w-0 items-center justify-center gap-1.5 rounded-[6px] px-1 text-xs font-black transition sm:gap-2 sm:px-3 sm:text-sm ${
+        active
+          ? "text-[#c45572]"
+          : "text-[#6f6259] hover:bg-[#fff8f2] hover:text-[#211f1d]"
+      } disabled:cursor-not-allowed disabled:opacity-60`}
+    >
+      {loading ? (
+        <LoadingSpinner className="h-4 w-4 shrink-0" />
+      ) : (
+        <span aria-hidden="true" className="flex h-5 w-5 shrink-0 items-center justify-center text-lg leading-none [&>svg]:h-[18px] [&>svg]:w-[18px]">
+          {icon}
+        </span>
+      )}
+      {countLabel ? <span className="truncate tabular-nums">{countLabel}</span> : null}
+      <span className="hidden lg:inline">{label}</span>
+    </button>
+  );
+}
+
+function BookmarkIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} aria-hidden="true">
+      <path
+        d="M7 4.75A1.75 1.75 0 0 1 8.75 3h6.5A1.75 1.75 0 0 1 17 4.75V21l-5-3.2L7 21V4.75Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function MessageBubbleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M5 18.25 3.75 21l3.8-1.2A8.8 8.8 0 1 0 5 18.25Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

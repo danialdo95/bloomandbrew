@@ -71,12 +71,12 @@ export function PostComposer({
   }, [hasMediaUrl, isYouTubeHost, mediaUrl, youtubeVideoId]);
 
   return (
-    <div className="rounded-[6px] border border-[#eadfd4] bg-white p-5 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
+    <div className="min-w-0 overflow-hidden rounded-[6px] border border-[#eadfd4] bg-white p-4 shadow-[0_8px_24px_rgba(64,45,35,0.06)] sm:p-5">
       <div className="flex gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7c6cf] text-sm font-black">
           {profile.avatar}
         </div>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <label className="block">
             <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-[#c45572]">
               Create a post
@@ -88,7 +88,7 @@ export function PostComposer({
               className="min-h-24 w-full resize-none rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-4 py-3 text-sm font-bold text-[#211f1d]"
             />
           </label>
-          <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <div className="mt-3 grid min-w-0 gap-3 md:grid-cols-3">
             <label className="block">
               <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.12em] text-[#8a7d73]">
                 Media link
@@ -179,7 +179,7 @@ export function PostComposer({
             </div>
           ) : null}
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -199,7 +199,7 @@ export function PostComposer({
               type="button"
               onClick={onPublish}
               disabled={isPublishing || !mediaCanPublish}
-              className="flex min-w-32 items-center justify-center gap-2 rounded-full bg-[#211f1d] px-6 py-3 text-sm font-black text-white transition hover:bg-[#c45572] disabled:cursor-not-allowed disabled:opacity-70"
+              className="flex w-full min-w-32 items-center justify-center gap-2 rounded-full bg-[#211f1d] px-6 py-3 text-sm font-black text-white transition hover:bg-[#c45572] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
             >
               {isPublishing ? <LoadingSpinner /> : null}
               {isPublishing

@@ -776,7 +776,7 @@ export function SocialApp({
   }, [posts]);
 
   const isFeedBusy = isFeedLoading || isExternalFeedLoading;
-  const showFeedSkeletons = isFeedBusy && posts.length <= initialExternalPosts.length;
+  const showFeedSkeletons = isFeedBusy && posts.length === 0;
 
   function addNotification(text: string) {
     const optimisticNotification = {
@@ -832,7 +832,7 @@ export function SocialApp({
         block: "start",
       });
     });
-    addNotification("Feed refreshed.");
+    addNotification("Refreshing your feed...");
   }
 
   useEffect(() => {
@@ -1605,7 +1605,7 @@ export function SocialApp({
   }
 
   return (
-    <main className="bg-[#fffaf6]">
+    <main className="overflow-x-hidden bg-[#fffaf6]">
       <SocialHero
         isAuthenticated={isAuthenticated}
         profile={profile}
@@ -1633,7 +1633,7 @@ export function SocialApp({
           />
         </aside>
 
-        <section ref={feedTopRef} className="order-1 space-y-5 lg:order-none">
+        <section ref={feedTopRef} className="order-1 min-w-0 space-y-5 lg:order-none">
           <div className="flex items-center justify-between gap-3 rounded-[6px] border border-[#eadfd4] bg-white p-2 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
             <div className="grid flex-1 grid-cols-2 gap-2">
               {([
@@ -1696,14 +1696,22 @@ export function SocialApp({
 
           {isFeedBusy ? (
             <div
-              className="flex items-center gap-3 rounded-[6px] border border-[#eadfd4] bg-white px-5 py-4 text-sm font-black text-[#6f6259] shadow-[0_8px_24px_rgba(64,45,35,0.06)]"
+              className={`flex items-center gap-2 border border-[#eadfd4] bg-white text-sm font-black text-[#6f6259] shadow-[0_8px_24px_rgba(64,45,35,0.06)] ${
+                posts.length
+                  ? "mx-auto w-fit rounded-full px-4 py-2"
+                  : "rounded-[6px] px-5 py-4"
+              }`}
               aria-live="polite"
               aria-busy="true"
             >
               <LoadingSpinner className="text-[#c45572]" />
               {feedMode === "following"
-                ? "Loading your following feed..."
-                : "Refreshing Bloom, Reddit, and YouTube posts..."}
+                ? posts.length
+                  ? "Checking for following updates..."
+                  : "Loading your following feed..."
+                : posts.length
+                  ? "Checking for fresh posts..."
+                  : "Loading Bloom, Reddit, and YouTube posts..."}
             </div>
           ) : null}
 
@@ -1736,13 +1744,28 @@ export function SocialApp({
           ) : (
             <div className="rounded-[6px] border border-dashed border-[#d8c8bc] bg-white p-8 text-center shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
               <h2 className="text-xl font-black text-[#211f1d]">
-                {feedMode === "following" ? "Build your following feed" : "No posts yet"}
+                {feedMode === "following"
+                  ? isAuthenticated
+                    ? "Your following feed is quiet"
+                    : "Sign in to view your following feed"
+                  : "No posts yet"}
               </h2>
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#6f6259]">
                 {feedMode === "following"
-                  ? "Follow suggested creators or publish your own post to make this feed bloom."
+                  ? isAuthenticated
+                    ? "Follow suggested creators or publish your own post to start the conversation."
+                    : "Your personalized feed will collect posts from creators you follow."
                   : "Share the first cafe, bouquet, or latte moment."}
               </p>
+              {feedMode === "following" && !isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={() => openAuth("signin")}
+                  className="mt-5 rounded-full bg-[#211f1d] px-6 py-3 text-sm font-black text-white transition hover:bg-[#c45572]"
+                >
+                  Sign in
+                </button>
+              ) : null}
             </div>
           )}
         </section>
