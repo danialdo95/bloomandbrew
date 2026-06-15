@@ -1046,6 +1046,7 @@ src/
       SocialHero.tsx
       SocialSidebar.tsx
       SuggestedFollows.tsx
+      useFeedPosts.ts
       useSocialSession.ts
   lib/
     auth.ts
@@ -1205,6 +1206,8 @@ For a real deployed social network, strengthen the current custom auth with:
 - Code-quality cleanup for unused legacy components and unused demo types/data
 - Optimized feed interaction queries to use database counts and viewer-scoped lookups instead of loading all like/share rows
 - Auth/session state extracted from `SocialApp.tsx` into `useSocialSession`
+- Feed loading, external sync, source status, and new-post polling extracted into `useFeedPosts`
+- Public feed action labels keep consistent Like, Share, Save, and Comment wording while active state is shown visually
 
 ## Partially Implemented
 - Feed persistence: user-created posts persist in PostgreSQL, while Reddit/YouTube content remains externally sourced and is mirrored only for interaction persistence
