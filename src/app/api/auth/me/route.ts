@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 
-import { getCurrentUser, getUserFollowStats, toAuthUser } from "@/lib/auth";
+import {
+  DISABLED_ACCOUNT_MESSAGE,
+  getCurrentUser,
+  getCurrentUserResult,
+  getUserFollowStats,
+  toAuthUser,
+} from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { SocialProfile } from "@/types/social";
 
@@ -9,10 +15,17 @@ function normalizeUsername(value: string) {
 }
 
 export async function GET() {
-  const user = await getCurrentUser();
+  const { disabled, user } = await getCurrentUserResult();
 
   if (!user) {
-    return NextResponse.json({ user: null });
+    return NextResponse.json(
+      {
+        disabledAccount: disabled,
+        error: disabled ? DISABLED_ACCOUNT_MESSAGE : undefined,
+        user: null,
+      },
+      { status: disabled ? 403 : 200 },
+    );
   }
 
   const stats = await getUserFollowStats(user.id);
