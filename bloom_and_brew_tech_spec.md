@@ -1039,7 +1039,15 @@ src/
     TrendTags.tsx
     social/
       AuthModal.tsx
+      DeletePostModal.tsx
+      DisabledAccountModal.tsx
+      FeedEmptyState.tsx
+      FeedLoadingNotice.tsx
+      FeedModeTabs.tsx
       FeedPost.tsx
+      FeedSkeletonList.tsx
+      FeedSourceStatusStrip.tsx
+      NewPostNotice.tsx
       PostComposer.tsx
       ProfilePanel.tsx
       PublicProfileFollowButton.tsx
@@ -1213,6 +1221,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Feed loading, external sync, source status, and new-post polling extracted into `useFeedPosts`
 - Post publishing, reactions, saving, sharing, commenting, and delete confirmation state extracted into `usePostActions`
 - Notification loading, optimistic notification persistence, suggested follow management, and geolocation tagging extracted into focused hooks
+- Feed tabs, feed notices, empty state, source status strip, skeletons, and account/delete modals extracted into presentational components
 - Public feed action labels keep consistent Like, Share, Save, and Comment wording while active state is shown visually
 
 ## Partially Implemented
