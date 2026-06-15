@@ -200,6 +200,22 @@ export function SocialApp({ redditPosts, source }: SocialAppProps) {
   }, []);
 
   useEffect(() => {
+    const authError = new URLSearchParams(window.location.search).get("authError");
+
+    if (!authError) {
+      return;
+    }
+
+    setAuthMode("signin");
+    setAuthOpen(true);
+    setAuthError(authError);
+
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.delete("authError");
+    window.history.replaceState({}, "", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+  }, []);
+
+  useEffect(() => {
     if (!currentUser) {
       return;
     }
