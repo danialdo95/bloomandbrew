@@ -10,8 +10,8 @@ import { ProfilePanel } from "@/components/social/ProfilePanel";
 import { SocialHero } from "@/components/social/SocialHero";
 import { SocialSidebar } from "@/components/social/SocialSidebar";
 import { SuggestedFollows } from "@/components/social/SuggestedFollows";
+import { useSocialSession } from "@/components/social/useSocialSession";
 import {
-  defaultProfile,
   seedSocialPosts,
 } from "@/lib/social";
 import { getTrendingKeywords } from "@/lib/trends";
@@ -21,7 +21,6 @@ import type {
   NotificationItem,
   PostShareMethod,
   SocialPost,
-  SocialProfile,
   SuggestedPerson,
 } from "@/types/social";
 
@@ -240,12 +239,6 @@ type ExternalPostStats = {
   comments: SocialPost["comments"];
 };
 
-type AuthMeResponse = {
-  disabledAccount?: boolean;
-  error?: string;
-  user: DemoUser | null;
-};
-
 export function SocialApp({
   redditPosts,
   source,
@@ -273,9 +266,6 @@ export function SocialApp({
     () => sortPostsByAge([...initialRedditPosts, ...initialYouTubePosts]),
     [initialRedditPosts, initialYouTubePosts],
   );
-  const [storageReady, setStorageReady] = useState(false);
-  const [currentUser, setCurrentUser] = useState<DemoUser | null>(null);
-  const [profile, setProfile] = useState<SocialProfile>(defaultProfile);
   const [posts, setPosts] = useState<SocialPost[]>(() =>
     initialExternalPosts,
   );
@@ -287,15 +277,6 @@ export function SocialApp({
   const [suggestedFollows, setSuggestedFollows] = useState<SuggestedPerson[]>([]);
   const [notifications, setNotifications] =
     useState<NotificationItem[]>(initialNotifications);
-  const [authOpen, setAuthOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
-  const [authName, setAuthName] = useState("");
-  const [authEmail, setAuthEmail] = useState("");
-  const [authPassword, setAuthPassword] = useState("");
-  const [authError, setAuthError] = useState("");
-  const [disabledAccountMessage, setDisabledAccountMessage] = useState("");
-  const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
-  const [isSigningOut, setIsSigningOut] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isFeedLoading, setIsFeedLoading] = useState(true);
   const [isExternalFeedLoading, setIsExternalFeedLoading] = useState(false);
@@ -319,8 +300,104 @@ export function SocialApp({
   const [followRefreshKey, setFollowRefreshKey] = useState(0);
   const postsRef = useRef(posts);
   const feedTopRef = useRef<HTMLElement | null>(null);
+  const isAuthenticatedRef = useRef(false);
 
-  const isAuthenticated = Boolean(currentUser);
+  const handleFeedModeChange = useCallback((mode: FeedMode) => {
+    setFeedMode(mode);
+
+    if (mode !== "for-you") {
+      setNewPostCount(0);
+    }
+  }, []);
+
+  const addNotification = useCallback((text: string) => {
+    const optimisticNotification = {
+      id: crypto.randomUUID(),
+      text,
+      createdAt: "Now",
+    };
+
+    setNotifications((current) => [
+      optimisticNotification,
+      ...current.slice(0, 19),
+    ]);
+
+    if (!isAuthenticatedRef.current) {
+      return;
+    }
+
+    fetch("/api/notifications", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text }),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as {
+          notification?: NotificationItem;
+        };
+
+        if (!data.notification) {
+          return;
+        }
+
+        setNotifications((current) =>
+          current.map((notification) =>
+            notification.id === optimisticNotification.id
+              ? data.notification as NotificationItem
+              : notification,
+          ),
+        );
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }, []);
+
+  const resetSessionFeed = useCallback(() => {
+    handleFeedModeChange("for-you");
+  }, [handleFeedModeChange]);
+
+  const {
+    authEmail,
+    authError,
+    authMode,
+    authName,
+    authOpen,
+    authPassword,
+    changeAuthMode,
+    closeAuth,
+    currentUser,
+    disabledAccountMessage,
+    dismissDisabledAccount,
+    handleAuthSubmit,
+    isAuthenticated,
+    isAuthSubmitting,
+    isSigningOut,
+    openAuth,
+    profile,
+    requireAuth,
+    setAuthEmail,
+    setAuthName,
+    setAuthPassword,
+    setCurrentUser,
+    signOut,
+    storageReady,
+    updateProfile,
+  } = useSocialSession({
+    onAuthNotice: addNotification,
+    onSessionReset: resetSessionFeed,
+  });
+
+  useEffect(() => {
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
   const externalPostKey = useMemo(
     () =>
       feedMode === "for-you"
@@ -348,95 +425,6 @@ export function SocialApp({
       return next;
     });
   }
-
-  const handleFeedModeChange = useCallback((mode: FeedMode) => {
-    setFeedMode(mode);
-
-    if (mode !== "for-you") {
-      setNewPostCount(0);
-    }
-  }, []);
-
-  const handleDisabledAccount = useCallback(
-    (message: string) => {
-      setCurrentUser(null);
-      setProfile(defaultProfile);
-      handleFeedModeChange("for-you");
-      setAuthOpen(false);
-      setAuthError("");
-      setDisabledAccountMessage(message);
-    },
-    [handleFeedModeChange],
-  );
-
-  useEffect(() => {
-    async function loadSession() {
-      try {
-        const response = await fetch("/api/auth/me");
-        const data = (await response.json()) as AuthMeResponse;
-
-        if (data.user) {
-          setCurrentUser(data.user);
-          setProfile(data.user.profile);
-        } else if (data.disabledAccount) {
-          handleDisabledAccount(
-            data.error ?? "Your account has been disabled. Please contact an administrator.",
-          );
-        }
-      } catch (error) {
-        console.error(error);
-      }
-
-      setStorageReady(true);
-    }
-
-    loadSession();
-  }, [handleDisabledAccount]);
-
-  useEffect(() => {
-    const authError = new URLSearchParams(window.location.search).get("authError");
-
-    if (!authError) {
-      return;
-    }
-
-    queueMicrotask(() => {
-      setAuthMode("signin");
-      setAuthOpen(true);
-      setAuthError(authError);
-    });
-
-    const nextUrl = new URL(window.location.href);
-    nextUrl.searchParams.delete("authError");
-    window.history.replaceState({}, "", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
-  }, []);
-
-  useEffect(() => {
-    if (!currentUser) {
-      return;
-    }
-
-    async function verifySession() {
-      try {
-        const response = await fetch("/api/auth/me");
-        const data = (await response.json()) as AuthMeResponse;
-
-        if (data.disabledAccount) {
-          handleDisabledAccount(
-            data.error ?? "Your account has been disabled. Please contact an administrator.",
-          );
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    }
-
-    window.addEventListener("focus", verifySession);
-
-    return () => {
-      window.removeEventListener("focus", verifySession);
-    };
-  }, [currentUser, handleDisabledAccount]);
 
   useEffect(() => {
     let active = true;
@@ -790,51 +778,6 @@ export function SocialApp({
   const isFeedBusy = isFeedLoading || isExternalFeedLoading;
   const showFeedSkeletons = isFeedBusy;
 
-  function addNotification(text: string) {
-    const optimisticNotification = {
-      id: crypto.randomUUID(),
-      text,
-      createdAt: "Now",
-    };
-
-    setNotifications((current) => [
-      optimisticNotification,
-      ...current.slice(0, 19),
-    ]);
-
-    if (!isAuthenticated) {
-      return;
-    }
-
-    void fetch("/api/notifications", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ text }),
-    })
-      .then(async (response) => {
-        const data = (await response.json()) as {
-          notification?: NotificationItem;
-        };
-
-        if (!response.ok || !data.notification) {
-          return;
-        }
-
-        setNotifications((current) =>
-          current.map((notification) =>
-            notification.id === optimisticNotification.id
-              ? data.notification as NotificationItem
-              : notification,
-          ),
-        );
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-  }
-
   function refreshFeedFromNotice() {
     setNewPostCount(0);
     setFeedRefreshKey((current) => current + 1);
@@ -854,152 +797,6 @@ export function SocialApp({
       }),
     );
   }, [notifications]);
-
-  function openAuth(mode: "signin" | "signup") {
-    setAuthMode(mode);
-    setAuthError("");
-    setAuthOpen(true);
-  }
-
-  function requireAuth(action: string) {
-    if (isAuthenticated) {
-      return true;
-    }
-
-    setAuthError(`Please sign in or create an account to ${action}.`);
-    openAuth("signin");
-    return false;
-  }
-
-  function clearAuthForm() {
-    setAuthName("");
-    setAuthEmail("");
-    setAuthPassword("");
-    setAuthError("");
-  }
-
-  function handleAuthSubmit() {
-    if (isAuthSubmitting) {
-      return;
-    }
-
-    const email = authEmail.trim().toLowerCase();
-    const password = authPassword.trim();
-    const name = authName.trim();
-
-    if (!email || !password || (authMode === "signup" && !name)) {
-      setAuthError("Fill in all required fields.");
-      return;
-    }
-
-    if (authMode === "signup") {
-      void signUp(email, password, name);
-      return;
-    }
-
-    void signIn(email, password);
-  }
-
-  async function signUp(email: string, password: string, name: string) {
-    setIsAuthSubmitting(true);
-    setAuthError("");
-
-    try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password, name }),
-      });
-      const data = (await response.json()) as { user?: DemoUser; error?: string };
-
-      if (!response.ok || !data.user) {
-        throw new Error(data.error ?? "Account could not be created.");
-      }
-
-      setCurrentUser(data.user);
-      setProfile(data.user.profile);
-      setAuthOpen(false);
-      clearAuthForm();
-      addNotification("Account created. Welcome to Bloom & Brew Social.");
-    } catch (error) {
-      setAuthError(
-        error instanceof Error ? error.message : "Account could not be created.",
-      );
-    } finally {
-      setIsAuthSubmitting(false);
-    }
-  }
-
-  async function signIn(email: string, password: string) {
-    setIsAuthSubmitting(true);
-    setAuthError("");
-
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = (await response.json()) as { user?: DemoUser; error?: string };
-
-      if (!response.ok || !data.user) {
-        throw new Error(data.error ?? "Invalid email or password.");
-      }
-
-      setCurrentUser(data.user);
-      setProfile(data.user.profile);
-      setAuthOpen(false);
-      clearAuthForm();
-      addNotification("Signed in successfully.");
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Invalid email or password.");
-    } finally {
-      setIsAuthSubmitting(false);
-    }
-  }
-
-  async function signOut() {
-    setIsSigningOut(true);
-
-    try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-      setCurrentUser(null);
-      setProfile(defaultProfile);
-      handleFeedModeChange("for-you");
-      addNotification("Signed out of your account.");
-    } finally {
-      setIsSigningOut(false);
-    }
-  }
-
-  async function updateProfile(nextProfile: SocialProfile) {
-    if (!currentUser) {
-      throw new Error("Sign in to edit your profile.");
-    }
-
-    const response = await fetch("/api/auth/me", {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(nextProfile),
-    });
-    const data = (await response.json()) as { user?: DemoUser; error?: string };
-
-    if (!response.ok || !data.user) {
-      throw new Error(data.error ?? "Profile could not be saved.");
-    }
-
-    setCurrentUser(data.user);
-    setProfile(data.user.profile);
-    addNotification("Profile saved.");
-  }
 
   async function publishPost() {
     if (!requireAuth("share posts")) {
@@ -1788,17 +1585,8 @@ export function SocialApp({
           authPassword={authPassword}
           authError={authError}
           isSubmitting={isAuthSubmitting}
-          onClose={() => {
-            if (isAuthSubmitting) {
-              return;
-            }
-            setAuthOpen(false);
-            setAuthError("");
-          }}
-          onModeChange={(mode) => {
-            setAuthMode(mode);
-            setAuthError("");
-          }}
+          onClose={closeAuth}
+          onModeChange={changeAuthMode}
           onNameChange={setAuthName}
           onEmailChange={setAuthEmail}
           onPasswordChange={setAuthPassword}
@@ -1905,7 +1693,7 @@ export function SocialApp({
             <div className="flex justify-end border-t border-[#f2e8df] bg-[#fffaf6] px-6 py-4">
               <button
                 type="button"
-                onClick={() => setDisabledAccountMessage("")}
+                onClick={dismissDisabledAccount}
                 className="rounded-[6px] bg-[#211f1d] px-5 py-2 text-sm font-black text-white transition hover:bg-[#c45572]"
               >
                 Got it
