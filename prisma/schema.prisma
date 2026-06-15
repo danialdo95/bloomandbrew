@@ -17,6 +17,7 @@ model User {
   avatar    String   @default("BB")
   bio       String?
   location  String?
+  status String @default("ACTIVE")
   posts     Post[]
   sessions  Session[]
   following Follow[] @relation("UserFollowing")
@@ -70,6 +71,7 @@ model Post {
   imageUrl  String?
   filter    String   @default("Natural")
   location  String?
+  status String @default("VISIBLE")
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   comments  Comment[]
   likes     Like[]

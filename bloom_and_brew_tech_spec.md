@@ -14,7 +14,7 @@ Bloom & Brew Social is a web-based social media prototype focused on cafe cultur
 
 The latest implementation is no longer only a dashboard. It now behaves like a social media application where users can create an account, personalize a profile, publish posts, attach image or YouTube media links, interact with posts, follow suggested creators, receive in-app notifications, use a sidebar calendar, add image filters, and tag locations.
 
-The first database migration steps have also been completed. User accounts, sessions, user-created posts, comments, likes, saves/bookmarks, shares, notifications, and follow relationships are now stored in PostgreSQL through Prisma ORM. Polls remain browser-local, while chat/calling and live-room features are tracked as backlog items.
+The first database migration steps have also been completed. User accounts, user account status, sessions, user-created posts, post moderation status, comments, likes, saves/bookmarks, shares, notifications, and follow relationships are now stored in PostgreSQL through Prisma ORM. Polls remain browser-local, while chat/calling and live-room features are tracked as backlog items.
 
 The application demonstrates:
 - Managed communities
@@ -157,7 +157,7 @@ Admin dashboard ─→ content suggestions, moderation actions, integration stat
 | Database | Prisma Postgres / PostgreSQL |
 | ORM | Prisma ORM |
 | State Management | React Hooks |
-| Persistence | PostgreSQL for users, sessions, posts, comments, likes, saves, shares, notifications, external-post interactions, and follows; localStorage/React state for remaining demo features |
+| Persistence | PostgreSQL for users, user status, sessions, posts, post status, comments, likes, saves, shares, notifications, external-post interactions, and follows; localStorage/React state for remaining demo features |
 | Charts/Analytics | Custom keyword and subreddit analysis |
 | Insight Layer | Trend-based content suggestions, admin analytics, and protected admin dashboard views |
 
@@ -285,7 +285,7 @@ Users can interact with posts and creators.
 - Delete own Bloom & Brew posts
 - Follow/unfollow suggested creators
 
-Likes, comments, saves/bookmarks, shares, notifications, follows, and post deletion are persisted in PostgreSQL for Bloom & Brew database-backed content and users. Reddit and YouTube posts remain external feed items, but their likes, comments, saves, and shares are persisted as external-post interactions. Polls are still local/demo features. Chat and live-room features are hidden from the current UI and moved to backlog.
+Likes, comments, saves/bookmarks, shares, notifications, follows, user account status, and post moderation status are persisted in PostgreSQL for Bloom & Brew database-backed content and users. Reddit and YouTube posts remain external feed items, but their likes, comments, saves, and shares are persisted as external-post interactions. Polls are still local/demo features. Chat and live-room features are hidden from the current UI and moved to backlog.
 
 ---
 
@@ -453,8 +453,8 @@ The dashboard will help platform managers monitor users, posts, trends, integrat
 
 | Module | Current Status |
 |---|---|
-| Users | View users and account metrics implemented; edit user information and disable/reactivate actions remain backlog |
-| Posts | View posts and engagement metrics implemented; filtering and moderation/delete controls remain backlog |
+| Users | View users and account metrics implemented; admin edit page and disable/reactivate status controls implemented |
+| Posts | View posts and engagement metrics implemented; hide/restore and delete moderation controls implemented; filtering remains backlog |
 | Trends | View trend signals implemented; featured trend and approval workflows remain backlog |
 | AI Suggestions | Rule-style suggestion view implemented; approve, dismiss, reuse, and persistence workflows remain backlog |
 | Integrations | Integration status view implemented; richer API health/fallback diagnostics remain backlog |
@@ -516,10 +516,10 @@ The first version can use rule-based recommendation logic from existing trend da
 | FR-12 | System shall support geolocation tagging | Implemented with browser API |
 | FR-13 | System shall be accessible online | Implemented through Vercel deployment |
 | FR-14 | System shall support responsive design | Implemented with Tailwind responsive layouts |
-| FR-15 | Admins shall manage users, posts, trends, and integrations | Partially implemented through protected admin dashboard pages; action controls remain backlog |
+| FR-15 | Admins shall manage users, posts, trends, and integrations | Partially implemented; user edit/status controls and post moderation actions exist, while trend/integration workflows remain limited |
 | FR-16 | System shall generate content suggestions from trend data | Partially implemented through the AI Suggestions admin view; approval/reuse workflows remain backlog |
 | FR-17 | Admins shall monitor external API and fallback status | Partially implemented through the Integration Management admin view |
-| FR-18 | Admins shall moderate or remove inappropriate Bloom posts | Backlog; post management view exists but moderation action controls are not complete |
+| FR-18 | Admins shall moderate or remove inappropriate Bloom posts | Implemented for Bloom posts through admin hide/restore and delete controls |
 
 ---
 
@@ -642,7 +642,7 @@ GET /api/posts
 ```
 
 ### Description
-Returns PostgreSQL-backed user-created posts in the social feed format.
+Returns PostgreSQL-backed user-created posts in the social feed format. Public feed requests only return posts with `status = "VISIBLE"` so admin-hidden posts are removed from the user-facing feed without deleting the database record.
 
 ### Response Shape
 
@@ -1154,32 +1154,34 @@ For a real deployed social network, strengthen the current custom auth with:
 - Seeded default admin account for local testing
 - Admin navbar link hidden from non-admin users
 - Admin dashboard logout action
+- Database-backed user account status field with `ACTIVE` and `DISABLED` states
+- Admin user edit page for updating user name, email, location, and status
+- Database-backed post moderation status field with `VISIBLE` and `HIDDEN` states
+- Admin post hide, restore, and delete moderation controls
+- Public Bloom post feed filters out hidden posts
 
 ## Partially Implemented
 - Feed persistence: user-created posts persist in PostgreSQL, while Reddit/YouTube content remains externally sourced and is mirrored only for interaction persistence
 - YouTube persistence: YouTube video posts are fetched from the API and embedded in the feed, while user interactions are saved locally in PostgreSQL
 - Follow personalization: follow records persist in PostgreSQL and power a Following feed, but external Reddit/YouTube posts are not personalized by follows
 - User identity: real accounts exist, but there is no email verification, password reset, OAuth, or advanced account security yet
-- Authorization: admin allowlist protection exists, but there is no database-backed role or status field yet
+- Authorization: admin allowlist protection exists, but there is no database-backed admin role field yet
 - Notifications: in-app notifications are database-backed, with browser permission request but no push service worker
 - Media editing: CSS filters only
 - Geolocation: coordinate tagging only, no map/location search
 - Reddit source: public JSON endpoint with fallback data; OAuth/API credentials are currently deferred
 - Trend analysis: keyword extraction exists, but it is not yet connected to admin-managed content suggestions
-- User management dashboard: user metrics can be viewed, but disable/reactivate and edit controls are not complete
-- Post management dashboard: post and engagement data can be viewed, but moderation actions and search/filter controls are not complete
+- User management dashboard: user metrics, edit controls, and disable/reactivate controls exist, but search/filter and stronger mutation authorization remain incomplete
+- Post management dashboard: post and engagement data, hide/restore, and delete controls exist, but search/filter and stronger mutation authorization remain incomplete
 - Trend management dashboard: trend signals can be viewed, but approval/featured workflows are not complete
 - AI-assisted content suggestion workflow: suggestion view exists, but approval, dismissal, reuse, and persistence are not complete
 - Integration management dashboard: integration status view exists, but richer health/fallback diagnostics are not complete
 - Share analytics: share counters persist, but selected platform/method is not yet persisted for analytics
 
 ## Not Yet Implemented
-- Admin user disable/reactivate controls
-- Admin user edit controls
-- Admin post moderation/delete controls in the dashboard UI
 - Admin search and filter controls for users and posts
 - Admin-only management API mutation routes
-- Database-backed admin roles and account status fields
+- Database-backed admin role field
 - Share analytics by platform/method
 - OAuth login
 - Email verification
@@ -1207,17 +1209,17 @@ For a real deployed social network, strengthen the current custom auth with:
 - Follow data filters the database-backed Following feed, but does not yet personalize Reddit or YouTube content
 - Chat and live-room features are currently hidden and tracked as backlog items
 - Admin access is controlled by an `ADMIN_EMAILS` allowlist instead of a database-backed role field
-- Admin management pages exist, but several action controls are still backlog
+- Admin management pages include user status/edit controls and post moderation controls, but search/filter and stronger mutation-level authorization remain backlog
 - Trend keywords are displayed, but there is no approval workflow or content suggestion management yet
 
 ---
 
 # 17. Future Improvements
 
-- Add admin user disable/reactivate and edit controls
-- Add admin post moderation/delete controls
 - Add admin-only management API routes with authorization checks
-- Add database-backed admin roles and account status fields
+- Add database-backed admin roles
+- Add stronger enforcement for disabled user accounts across login and posting flows
+- Add admin search and filter controls for users and posts
 - Add trend approval/featured workflows using the existing keyword analysis utility
 - Add AI-style suggestion approval, dismissal, and reuse workflows
 - Add richer integration health cards for Reddit and YouTube
@@ -1242,16 +1244,14 @@ For a real deployed social network, strengthen the current custom auth with:
 
 The next development branch should focus on the management functionality required by the new assignment question.
 
-## Priority 1: Admin User and Post Management Actions
-- Add user disable/reactivate controls
-- Add user profile edit controls for admin workflows
-- Add post delete/moderation controls
+## Priority 1: Admin Management Hardening
 - Add search/filter controls for users and posts
 - Protect management mutations with admin-only API authorization
+- Enforce disabled user status in login and posting workflows
+- Add confirmation or clear feedback for destructive post deletion
 
 ## Priority 2: Database-Backed Admin Roles
 - Add a user role or admin flag to Prisma
-- Add account status for active/disabled users
 - Migrate admin access from `ADMIN_EMAILS` to database-backed authorization
 - Keep `ADMIN_EMAILS` only as a local bootstrap option if needed
 

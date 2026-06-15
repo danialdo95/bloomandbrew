@@ -69,8 +69,10 @@ export async function GET(request: Request) {
   const user = await getCurrentUser();
   const viewer = user?.id ?? searchParams.get("viewer") ?? undefined;
   const feed = searchParams.get("feed");
-  const where = feed === "following" && user
+ const where =
+  feed === "following" && user
     ? {
+        status: "VISIBLE",
         authorId: {
           in: [
             user.id,
@@ -85,7 +87,9 @@ export async function GET(request: Request) {
           ],
         },
       }
-    : undefined;
+    : {
+        status: "VISIBLE",
+      };
 
   if (feed === "following" && !user) {
     return NextResponse.json(
