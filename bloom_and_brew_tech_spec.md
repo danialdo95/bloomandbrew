@@ -338,6 +338,9 @@ The right sidebar now shows a Bloom calendar card instead of the previous chat a
 - Weekly calendar grid
 - Highlighted cafe/floral events
 - Static event prompts for content planning
+- Compact event indicators inside day cells
+- Scannable upcoming-events list with event type, time, and prompt detail
+- Accessible calendar labels for week days and scheduled prompts
 
 ## Limitation
 The calendar is currently static and does not persist user-created events.
@@ -886,6 +889,7 @@ These routes will support the Admin Insights Dashboard. They should return aggre
 - Comments
 - Notifications
 - Sidebar calendar
+- Sidebar calendar with weekly prompts and upcoming-event details
 - Trending tags
 
 ---

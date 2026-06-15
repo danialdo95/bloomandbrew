@@ -1,9 +1,29 @@
 import { TrendTags } from "@/components/TrendTags";
 
-const calendarEvents: Record<number, string> = {
-  2: "Latte art",
-  4: "Bouquet drop",
-  6: "Cafe crawl",
+const calendarEvents: Record<number, {
+  title: string;
+  type: string;
+  time: string;
+  detail: string;
+}> = {
+  2: {
+    title: "Latte art class",
+    type: "Cafe",
+    time: "10:00 AM",
+    detail: "Share a pour, cafe corner, or flower pairing for the community feed.",
+  },
+  4: {
+    title: "Bouquet drop",
+    type: "Floral",
+    time: "2:30 PM",
+    detail: "Collect seasonal arrangement ideas for creator posts.",
+  },
+  6: {
+    title: "Weekend cafe crawl",
+    type: "Social",
+    time: "9:00 AM",
+    detail: "Save ideas for the next cafe and bouquet inspiration run.",
+  },
 };
 
 type SocialSidebarProps = {
@@ -18,6 +38,7 @@ export function SocialSidebar({ trends, source }: SocialSidebarProps) {
     month: "long",
     year: "numeric",
   });
+  const nextEvents = calendarDays.filter((item) => item.event);
 
   return (
     <aside className="order-3 space-y-5 lg:order-none">
@@ -34,45 +55,67 @@ export function SocialSidebar({ trends, source }: SocialSidebarProps) {
           </span>
         </div>
 
-        <div className="mt-5 grid grid-cols-7 gap-2">
+        <div className="mt-5 grid grid-cols-7 gap-1.5" role="list" aria-label="This week's content calendar">
           {calendarDays.map((item) => (
             <div
               key={item.isoDate}
-              className={`min-h-20 rounded-[6px] border px-2 py-2 text-center ${
+              role="listitem"
+              aria-label={`${item.fullLabel}${item.event ? `, ${item.event.title} at ${item.event.time}` : ""}`}
+              className={`relative min-h-16 rounded-[6px] border px-1.5 py-2 text-center transition ${
                 item.isToday
-                  ? "border-[#211f1d] bg-[#fff176]"
+                  ? "border-[#211f1d] bg-[#fff176] shadow-[0_8px_18px_rgba(33,31,29,0.14)]"
                   : item.event
-                  ? "border-[#c45572] bg-[#fff8f2]"
-                  : "border-[#eadfd4] bg-white"
+                    ? "border-[#c45572] bg-[#fff8f2]"
+                    : "border-[#eadfd4] bg-white"
               }`}
             >
-              <p className="text-[10px] font-black uppercase tracking-[0.08em] text-[#8a7d73]">
+              <p className="text-[9px] font-black uppercase tracking-[0.08em] text-[#8a7d73]">
                 {item.label}
               </p>
-              <p className="mt-1 text-lg font-black text-[#211f1d]">{item.day}</p>
+              <p className="mt-1 text-lg font-black leading-none text-[#211f1d]">{item.day}</p>
               {item.event ? (
-                <p className={`mt-1 text-[10px] font-black leading-4 ${
-                  item.isToday ? "text-[#211f1d]" : "text-[#c45572]"
-                }`}>
-                  {item.event}
-                </p>
+                <span
+                  className={`mx-auto mt-2 block h-1.5 w-1.5 rounded-full ${
+                    item.isToday ? "bg-[#211f1d]" : "bg-[#c45572]"
+                  }`}
+                  aria-hidden="true"
+                />
               ) : null}
             </div>
           ))}
         </div>
 
-        <div className="mt-5 space-y-3">
-          <div className="rounded-[6px] bg-[#fff8f2] p-3">
-            <p className="text-sm font-black text-[#211f1d]">Latte art class</p>
-            <p className="mt-1 text-xs font-bold leading-5 text-[#6f6259]">
-              Share a pour, cafe corner, or flower pairing for the community feed.
-            </p>
+        <div className="mt-5 border-t border-[#f2e8df] pt-4">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-sm font-black text-[#211f1d]">Up next</h3>
+            <span className="rounded-full bg-[#fff8f2] px-2.5 py-1 text-[11px] font-black text-[#8a7d73]">
+              {nextEvents.length} events
+            </span>
           </div>
-          <div className="rounded-[6px] bg-[#fff8f2] p-3">
-            <p className="text-sm font-black text-[#211f1d]">Weekend cafe crawl</p>
-            <p className="mt-1 text-xs font-bold leading-5 text-[#6f6259]">
-              Save ideas for the next cafe and bouquet inspiration run.
-            </p>
+          <div className="mt-3 space-y-2">
+            {nextEvents.map((item) => (
+              <div
+                key={`${item.isoDate}-${item.event?.title}`}
+                className="rounded-[6px] border border-[#eadfd4] bg-[#fff8f2] p-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black text-[#211f1d]">
+                      {item.event?.title}
+                    </p>
+                    <p className="mt-1 text-xs font-bold text-[#8a7d73]">
+                      {item.shortDate} · {item.event?.time}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-[#c45572]">
+                    {item.event?.type}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs font-bold leading-5 text-[#6f6259]">
+                  {item.event?.detail}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -102,6 +145,15 @@ function getCurrentWeek(today: Date) {
     return {
       label: date.toLocaleDateString("en-US", { weekday: "short" }),
       day: date.toLocaleDateString("en-US", { day: "numeric" }),
+      fullLabel: date.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      }),
+      shortDate: date.toLocaleDateString("en-US", {
+        weekday: "short",
+        day: "numeric",
+      }),
       isoDate: date.toISOString(),
       event: calendarEvents[index] ?? null,
       isToday: isSameDate(date, today),
