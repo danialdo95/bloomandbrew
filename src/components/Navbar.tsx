@@ -89,7 +89,7 @@ export function Navbar({ showAdminLink }: NavbarProps) {
 
       if (permission === "granted") {
         new Notification("Bloom & Brew Social", {
-          body: "Browser alerts are enabled for this demo.",
+          body: "Browser alerts are enabled for Bloom & Brew Social.",
         });
       }
 

@@ -26,11 +26,11 @@ export default function CommunityPage() {
           Community picks
         </p>
         <h1 className="mt-3 text-4xl font-black text-[#211f1d]">
-          Lightweight engagement loop
+          Community direction
         </h1>
         <p className="mt-4 text-base leading-7 text-[#6f6259]">
-          Polls let visitors participate in the content direction and demonstrate
-          the post, interact, feedback, improve cycle from the project spec.
+          Polls let visitors shape upcoming cafe-floral topics, bouquet ideas,
+          and community posts.
         </p>
       </div>
 

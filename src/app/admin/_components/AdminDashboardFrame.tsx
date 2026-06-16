@@ -61,14 +61,6 @@ export function AdminDashboardFrame({ children }: AdminDashboardFrameProps) {
                 );
               })}
             </div>
-            <div className="mt-5 rounded-[6px] bg-[#fff176] p-3">
-              <p className="text-xs font-black uppercase tracking-[0.12em] text-[#211f1d]">
-                Next action
-              </p>
-              <p className="mt-2 text-sm font-bold leading-6 text-[#211f1d]">
-                Add moderation controls and admin-only access.
-              </p>
-            </div>
             <button
               type="button"
               onClick={handleLogout}
