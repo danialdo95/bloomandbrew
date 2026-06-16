@@ -208,6 +208,74 @@ export async function getAdminPosts({
   };
 }
 
+export async function getAdminCalendarEvents({
+  page = 1,
+  query = "",
+  status = "all",
+  type = "all",
+}: {
+  page?: number;
+  query?: string;
+  status?: string;
+  type?: string;
+} = {}) {
+  const search = query.trim();
+  const statusFilter = status.toUpperCase();
+  const typeFilter = type.toUpperCase();
+  const statusWhere = statusFilter === "DRAFT"
+    || statusFilter === "SCHEDULED"
+    || statusFilter === "COMPLETED"
+    || statusFilter === "CANCELLED"
+    ? { status: statusFilter }
+    : {};
+  const typeWhere = typeFilter === "CAFE"
+    || typeFilter === "FLORAL"
+    || typeFilter === "SOCIAL"
+    || typeFilter === "PROMOTION"
+    || typeFilter === "CONTENT"
+    ? { eventType: typeFilter }
+    : {};
+  const searchWhere = search
+    ? {
+        OR: [
+          { title: { contains: search, mode: "insensitive" as const } },
+          { description: { contains: search, mode: "insensitive" as const } },
+          { prompt: { contains: search, mode: "insensitive" as const } },
+        ],
+      }
+    : {};
+  const where = {
+    ...statusWhere,
+    ...typeWhere,
+    ...searchWhere,
+  };
+
+  const [events, total] = await Promise.all([
+    prisma.calendarEvent.findMany({
+      where,
+      orderBy: {
+        startsAt: "asc",
+      },
+      skip: (page - 1) * ADMIN_PAGE_SIZE,
+      take: ADMIN_PAGE_SIZE,
+      include: {
+        createdBy: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+    }),
+    prisma.calendarEvent.count({ where }),
+  ]);
+
+  return {
+    events,
+    pagination: getAdminPagination(total, page),
+  };
+}
+
 export async function getAdminTrends(limit = 10) {
   const [redditFeed, posts] = await Promise.all([
     getRedditFeed(),

@@ -10,8 +10,9 @@ function hashSeedPassword(password: string) {
 
 async function main() {
   const adminPasswordHash = hashSeedPassword("password");
+  const now = new Date();
 
-  await prisma.user.upsert({
+  const admin = await prisma.user.upsert({
     where: { email: "admin@bloombrew.com" },
     update: {
       passwordHash: adminPasswordHash,
@@ -240,6 +241,61 @@ async function main() {
     create: {
       followerId: leo.id,
       followingId: latteStory.id,
+    },
+  });
+
+  const calendarStarts = [2, 4, 6].map((dayOffset) => {
+    const date = new Date(now);
+    date.setDate(now.getDate() + dayOffset);
+    date.setHours(dayOffset === 4 ? 14 : 10, dayOffset === 4 ? 30 : 0, 0, 0);
+    return date;
+  });
+
+  await prisma.calendarEvent.upsert({
+    where: { id: "seed-calendar-latte-art" },
+    update: {},
+    create: {
+      id: "seed-calendar-latte-art",
+      title: "Latte art class",
+      description: "A public post idea for cafe creators to share a pour, cafe corner, or flower pairing.",
+      prompt: "Share a latte art pour with a floral pairing idea for the Bloom & Brew feed.",
+      eventType: "CAFE",
+      status: "SCHEDULED",
+      visibility: "PUBLIC",
+      startsAt: calendarStarts[0],
+      createdById: admin.id,
+    },
+  });
+
+  await prisma.calendarEvent.upsert({
+    where: { id: "seed-calendar-bouquet-drop" },
+    update: {},
+    create: {
+      id: "seed-calendar-bouquet-drop",
+      title: "Bouquet drop",
+      description: "Seasonal arrangement post idea for florist and cafe display posts.",
+      prompt: "Post a seasonal bouquet color palette and explain which drink you would pair with it.",
+      eventType: "FLORAL",
+      status: "SCHEDULED",
+      visibility: "PUBLIC",
+      startsAt: calendarStarts[1],
+      createdById: admin.id,
+    },
+  });
+
+  await prisma.calendarEvent.upsert({
+    where: { id: "seed-calendar-weekend-crawl" },
+    update: {},
+    create: {
+      id: "seed-calendar-weekend-crawl",
+      title: "Weekend cafe crawl",
+      description: "Community post idea for saving cafe and bouquet inspiration from the weekend.",
+      prompt: "Share one cafe stop and one floral detail you would recommend for a weekend visit.",
+      eventType: "SOCIAL",
+      status: "SCHEDULED",
+      visibility: "PUBLIC",
+      startsAt: calendarStarts[2],
+      createdById: admin.id,
     },
   });
 

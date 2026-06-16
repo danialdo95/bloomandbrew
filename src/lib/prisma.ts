@@ -21,7 +21,12 @@ const globalForPrisma = globalThis as unknown as {
 function hasCurrentDelegates(client: PrismaClient) {
   const delegates = client as unknown as Record<string, unknown>;
 
-  return Boolean(delegates.postShare && delegates.externalShare && delegates.notification);
+  return Boolean(
+    delegates.postShare
+      && delegates.externalShare
+      && delegates.notification
+      && delegates.calendarEvent,
+  );
 }
 
 const prisma = globalForPrisma.prisma && hasCurrentDelegates(globalForPrisma.prisma)

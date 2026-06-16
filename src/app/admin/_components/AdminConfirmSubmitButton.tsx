@@ -9,6 +9,8 @@ type AdminConfirmSubmitButtonProps = {
   className: string;
   message: string;
   title?: string;
+  warningMessage?: string;
+  warningTitle?: string;
 };
 
 export function AdminConfirmSubmitButton({
@@ -17,6 +19,8 @@ export function AdminConfirmSubmitButton({
   className,
   message,
   title = "Confirm deletion",
+  warningMessage = "Deleting a post also removes its related engagement records.",
+  warningTitle = "Permanent change",
 }: AdminConfirmSubmitButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -61,10 +65,10 @@ export function AdminConfirmSubmitButton({
               </p>
               <div className="mt-4 rounded-[6px] border border-red-100 bg-red-50 px-4 py-3">
                 <p className="text-xs font-black uppercase tracking-[0.12em] text-red-700">
-                  Permanent change
+                  {warningTitle}
                 </p>
                 <p className="mt-1 text-sm font-bold leading-5 text-red-700">
-                  Deleting a post also removes its related engagement records.
+                  {warningMessage}
                 </p>
               </div>
             </div>
