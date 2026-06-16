@@ -253,7 +253,15 @@ async function main() {
 
   await prisma.calendarEvent.upsert({
     where: { id: "seed-calendar-latte-art" },
-    update: {},
+    update: {
+      description: "A public post idea for cafe creators to share a pour, cafe corner, or flower pairing.",
+      prompt: "Share a latte art pour with a floral pairing idea for the Bloom & Brew feed.",
+      eventType: "CAFE",
+      status: "SCHEDULED",
+      visibility: "PUBLIC",
+      startsAt: calendarStarts[0],
+      createdById: admin.id,
+    },
     create: {
       id: "seed-calendar-latte-art",
       title: "Latte art class",
@@ -269,7 +277,15 @@ async function main() {
 
   await prisma.calendarEvent.upsert({
     where: { id: "seed-calendar-bouquet-drop" },
-    update: {},
+    update: {
+      description: "Seasonal arrangement post idea for florist and cafe display posts.",
+      prompt: "Post a seasonal bouquet color palette and explain which drink you would pair with it.",
+      eventType: "FLORAL",
+      status: "SCHEDULED",
+      visibility: "PUBLIC",
+      startsAt: calendarStarts[1],
+      createdById: admin.id,
+    },
     create: {
       id: "seed-calendar-bouquet-drop",
       title: "Bouquet drop",
@@ -285,7 +301,15 @@ async function main() {
 
   await prisma.calendarEvent.upsert({
     where: { id: "seed-calendar-weekend-crawl" },
-    update: {},
+    update: {
+      description: "Community post idea for saving cafe and bouquet inspiration from the weekend.",
+      prompt: "Share one cafe stop and one floral detail you would recommend for a weekend visit.",
+      eventType: "SOCIAL",
+      status: "SCHEDULED",
+      visibility: "PUBLIC",
+      startsAt: calendarStarts[2],
+      createdById: admin.id,
+    },
     create: {
       id: "seed-calendar-weekend-crawl",
       title: "Weekend cafe crawl",

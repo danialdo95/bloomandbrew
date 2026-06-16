@@ -344,6 +344,11 @@ The right sidebar now shows a database-backed Bloom calendar card instead of the
 - Calendar event detail modal
 - Public "Use as post idea" action that prefills the post composer
 - Admin-managed event type, status, visibility, date, description, and post idea fields
+- Multiple events per day shown through stacked calendar indicators
+- Public upcoming-events modal when more weekly events are available
+- Public calendar sync error state
+- Admin create/edit event modals
+- Admin quick actions for publishing, completing, and cancelling events
 
 ## Persistence
 Calendar events are stored in PostgreSQL through Prisma in the `CalendarEvent` table. Public users only see events with `visibility = "PUBLIC"` and `status = "SCHEDULED"`. Admin-only, draft, completed, and cancelled events remain available in the admin management view.
@@ -482,7 +487,7 @@ The dashboard will help platform managers monitor users, posts, trends, integrat
 |---|---|
 | Users | View users and account metrics implemented; search, pagination, admin edit page, feedback messages, and disable/reactivate status controls implemented |
 | Posts | View posts and engagement metrics implemented; search, status filtering, pagination, hide/restore, delete confirmation, and delete moderation controls implemented |
-| Calendar | Database-backed calendar events implemented; create, edit, delete, search, status/type filtering, pagination, visibility controls, and public post idea reuse implemented |
+| Calendar | Database-backed calendar events implemented; create/edit modals, delete confirmation, search, status/type filtering, pagination, visibility controls, quick status actions, multiple public weekly events, sync error state, and public post idea reuse implemented |
 | Trends | View trend signals implemented; featured trend and approval workflows remain backlog |
 | AI Suggestions | Rule-style suggestion view implemented; approve, dismiss, reuse, and persistence workflows remain backlog |
 | Integrations | Integration status view implemented; richer API health/fallback diagnostics remain backlog |
@@ -1208,6 +1213,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Sidebar calendar card
 - Database-backed calendar event model and public calendar API
 - Public calendar event modal with post idea reuse
+- Public calendar supports multiple events per day, upcoming-events modal, and sync error state
 - Trends, Discover, and Community pages
 - Admin dashboard shell at `/admin`
 - Separate admin management pages for users, posts, calendar, trends, AI suggestions, and integrations
@@ -1225,7 +1231,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Public Bloom post feed filters out hidden posts
 - Admin user search with paginated results
 - Admin post search and `VISIBLE`/`HIDDEN` status filtering with paginated results
-- Admin calendar create, edit, delete, search, status/type filtering, visibility controls, and paginated results
+- Admin calendar create/edit modals, delete confirmation, quick status actions, search, status/type filtering, visibility controls, and paginated results
 - Admin action feedback for user edits, status changes, and post moderation actions
 - Delete confirmation for destructive admin post deletion
 - Admin mutation-level authorization checks for user edit/status and post moderation server actions

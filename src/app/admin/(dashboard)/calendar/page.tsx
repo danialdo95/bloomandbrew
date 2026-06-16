@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { AdminCalendarEventModalButton } from "@/app/admin/_components/AdminCalendarEventModalButton";
 import { AdminConfirmSubmitButton } from "@/app/admin/_components/AdminConfirmSubmitButton";
 import { AdminPageHeader } from "@/app/admin/_components/AdminPageHeader";
 import { AdminPagination } from "@/app/admin/_components/AdminPagination";
@@ -68,6 +69,10 @@ function getFeedbackMessage(value?: string) {
 
   if (value === "deleted") {
     return "Calendar event was deleted.";
+  }
+
+  if (value === "status") {
+    return "Calendar event status was updated.";
   }
 
   if (value === "invalid") {
@@ -212,6 +217,32 @@ async function deleteCalendarEvent(formData: FormData) {
   redirect(withFeedback(returnTo, "deleted"));
 }
 
+async function updateCalendarEventStatus(formData: FormData) {
+  "use server";
+
+  await ensureAdminAction();
+  const eventId = getString(formData, "eventId");
+  const status = getString(formData, "status").toUpperCase();
+  const returnTo = getReturnTo(formData.get("returnTo"));
+
+  if (!eventId || !isCalendarEventStatus(status)) {
+    redirect(withFeedback(returnTo, "invalid"));
+  }
+
+  await prisma.calendarEvent.update({
+    where: {
+      id: eventId,
+    },
+    data: {
+      status,
+    },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/admin/calendar");
+  redirect(withFeedback(returnTo, "status"));
+}
+
 export default async function AdminCalendarPage({ searchParams }: AdminCalendarPageProps) {
   const params = await searchParams;
   const query = params?.q?.trim() ?? "";
@@ -244,6 +275,18 @@ export default async function AdminCalendarPage({ searchParams }: AdminCalendarP
   }
 
   const returnTo = `/admin/calendar${baseParams.toString() ? `?${baseParams.toString()}` : ""}`;
+  const typeOptions = CALENDAR_EVENT_TYPES.map((item) => ({
+    label: formatOption(item),
+    value: item,
+  }));
+  const statusOptions = CALENDAR_EVENT_STATUSES.map((item) => ({
+    label: formatOption(item),
+    value: item,
+  }));
+  const visibilityOptions = CALENDAR_EVENT_VISIBILITIES.map((item) => ({
+    label: formatOption(item),
+    value: item,
+  }));
 
   return (
     <>
@@ -311,12 +354,24 @@ export default async function AdminCalendarPage({ searchParams }: AdminCalendarP
         </form>
       </section>
 
-      <section className="mt-5 rounded-[6px] border border-[#eadfd4] bg-white p-5 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
-        <h3 className="text-lg font-black text-[#211f1d]">Create calendar event</h3>
-        <CalendarEventForm
+      <section className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-[#eadfd4] bg-white p-4 shadow-[0_8px_24px_rgba(64,45,35,0.06)]">
+        <div>
+          <h3 className="text-lg font-black text-[#211f1d]">Calendar events</h3>
+          <p className="mt-1 text-sm font-bold text-[#6f6259]">
+            Manage what appears publicly and what stays admin-only.
+          </p>
+        </div>
+        <AdminCalendarEventModalButton
           action={createCalendarEvent}
+          buttonClassName="rounded-[6px] bg-[#211f1d] px-4 py-2 text-sm font-black text-white transition hover:bg-[#c45572]"
+          buttonLabel="Create event"
+          mode="create"
           returnTo={returnTo}
+          statusOptions={statusOptions}
           submitLabel="Create event"
+          title="Create calendar event"
+          typeOptions={typeOptions}
+          visibilityOptions={visibilityOptions}
         />
       </section>
 
@@ -358,31 +413,67 @@ export default async function AdminCalendarPage({ searchParams }: AdminCalendarP
                 </p>
               ) : null}
 
-              <details className="mt-4 rounded-[6px] bg-[#fffaf6] p-3">
-                <summary className="cursor-pointer text-sm font-black text-[#211f1d]">
-                  Edit event
-                </summary>
-                <CalendarEventForm
-                  action={updateCalendarEvent}
-                  event={event}
-                  returnTo={returnTo}
-                  submitLabel="Save changes"
-                />
-                <form action={deleteCalendarEvent} className="mt-3">
-                  <input type="hidden" name="eventId" value={event.id} />
-                  <input type="hidden" name="returnTo" value={returnTo} />
-                  <AdminConfirmSubmitButton
-                    title="Delete this event?"
-                    message="This calendar event will be removed from the admin dashboard and the public Bloom calendar."
-                    confirmLabel="Delete event"
-                    warningTitle="Calendar event deletion"
-                    warningMessage="This does not delete user posts, but the scheduled post idea will no longer be available."
-                    className="rounded-[6px] border border-red-200 bg-red-50 px-3 py-2 text-xs font-black text-red-700 transition hover:border-red-400"
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[6px] bg-[#fffaf6] p-3">
+                <div className="flex flex-wrap gap-2">
+                  <QuickStatusButton
+                    action={updateCalendarEventStatus}
+                    eventId={event.id}
+                    returnTo={returnTo}
+                    status="SCHEDULED"
+                    disabled={event.status === "SCHEDULED"}
                   >
-                    Delete event
-                  </AdminConfirmSubmitButton>
-                </form>
-              </details>
+                    Publish
+                  </QuickStatusButton>
+                  <QuickStatusButton
+                    action={updateCalendarEventStatus}
+                    eventId={event.id}
+                    returnTo={returnTo}
+                    status="COMPLETED"
+                    disabled={event.status === "COMPLETED"}
+                  >
+                    Complete
+                  </QuickStatusButton>
+                  <QuickStatusButton
+                    action={updateCalendarEventStatus}
+                    eventId={event.id}
+                    returnTo={returnTo}
+                    status="CANCELLED"
+                    disabled={event.status === "CANCELLED"}
+                  >
+                    Cancel
+                  </QuickStatusButton>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <AdminCalendarEventModalButton
+                    action={updateCalendarEvent}
+                    buttonClassName="rounded-[6px] border border-[#eadfd4] bg-white px-3 py-2 text-xs font-black text-[#211f1d] transition hover:border-[#c45572] hover:text-[#c45572]"
+                    buttonLabel="Edit"
+                    event={toCalendarModalEvent(event)}
+                    mode="edit"
+                    returnTo={returnTo}
+                    statusOptions={statusOptions}
+                    submitLabel="Save changes"
+                    title="Edit calendar event"
+                    typeOptions={typeOptions}
+                    visibilityOptions={visibilityOptions}
+                  />
+                  <form action={deleteCalendarEvent}>
+                    <input type="hidden" name="eventId" value={event.id} />
+                    <input type="hidden" name="returnTo" value={returnTo} />
+                    <AdminConfirmSubmitButton
+                      title="Delete this event?"
+                      message="This calendar event will be removed from the admin dashboard and the public Bloom calendar."
+                      confirmLabel="Delete event"
+                      warningTitle="Calendar event deletion"
+                      warningMessage="This does not delete user posts, but the scheduled post idea will no longer be available."
+                      className="rounded-[6px] border border-red-200 bg-red-50 px-3 py-2 text-xs font-black text-red-700 transition hover:border-red-400"
+                    >
+                      Delete event
+                    </AdminConfirmSubmitButton>
+                  </form>
+                </div>
+              </div>
             </article>
           ))}
 
@@ -412,131 +503,59 @@ export default async function AdminCalendarPage({ searchParams }: AdminCalendarP
   );
 }
 
-function CalendarEventForm({
+function QuickStatusButton({
   action,
-  event,
+  children,
+  disabled,
+  eventId,
   returnTo,
-  submitLabel,
+  status,
 }: {
   action: (formData: FormData) => Promise<void>;
-  event?: {
-    id: string;
-    title: string;
-    description: string | null;
-    prompt: string | null;
-    eventType: string;
-    status: string;
-    visibility: string;
-    startsAt: Date;
-    endsAt: Date | null;
-  };
+  children: string;
+  disabled: boolean;
+  eventId: string;
   returnTo: string;
-  submitLabel: string;
+  status: string;
 }) {
   return (
-    <form action={action} className="mt-4 grid gap-3">
-      {event ? <input type="hidden" name="eventId" value={event.id} /> : null}
+    <form action={action}>
+      <input type="hidden" name="eventId" value={eventId} />
       <input type="hidden" name="returnTo" value={returnTo} />
-      <div className="grid gap-3 lg:grid-cols-2">
-        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-[#8a7d73]">
-          Title
-          <input
-            required
-            name="title"
-            defaultValue={event?.title ?? ""}
-            className="h-10 rounded-[6px] border border-[#eadfd4] px-3 text-sm font-bold normal-case tracking-normal text-[#211f1d] outline-none transition focus:border-[#c45572]"
-          />
-        </label>
-        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-[#8a7d73]">
-          Start date
-          <input
-            required
-            type="datetime-local"
-            name="startsAt"
-            defaultValue={event ? formatDateTimeInput(event.startsAt) : ""}
-            className="h-10 rounded-[6px] border border-[#eadfd4] px-3 text-sm font-bold normal-case tracking-normal text-[#211f1d] outline-none transition focus:border-[#c45572]"
-          />
-        </label>
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-4">
-        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-[#8a7d73]">
-          Type
-          <select
-            name="eventType"
-            defaultValue={event?.eventType ?? "CONTENT"}
-            className="h-10 rounded-[6px] border border-[#eadfd4] bg-white px-3 text-sm font-bold normal-case tracking-normal text-[#211f1d] outline-none transition focus:border-[#c45572]"
-          >
-            {CALENDAR_EVENT_TYPES.map((item) => (
-              <option key={item} value={item}>{formatOption(item)}</option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-[#8a7d73]">
-          Status
-          <select
-            name="status"
-            defaultValue={event?.status ?? "SCHEDULED"}
-            className="h-10 rounded-[6px] border border-[#eadfd4] bg-white px-3 text-sm font-bold normal-case tracking-normal text-[#211f1d] outline-none transition focus:border-[#c45572]"
-          >
-            {CALENDAR_EVENT_STATUSES.map((item) => (
-              <option key={item} value={item}>{formatOption(item)}</option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-[#8a7d73]">
-          Visibility
-          <select
-            name="visibility"
-            defaultValue={event?.visibility ?? "PUBLIC"}
-            className="h-10 rounded-[6px] border border-[#eadfd4] bg-white px-3 text-sm font-bold normal-case tracking-normal text-[#211f1d] outline-none transition focus:border-[#c45572]"
-          >
-            {CALENDAR_EVENT_VISIBILITIES.map((item) => (
-              <option key={item} value={item}>{formatOption(item)}</option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-[#8a7d73]">
-          End date
-          <input
-            type="datetime-local"
-            name="endsAt"
-            defaultValue={event?.endsAt ? formatDateTimeInput(event.endsAt) : ""}
-            className="h-10 rounded-[6px] border border-[#eadfd4] px-3 text-sm font-bold normal-case tracking-normal text-[#211f1d] outline-none transition focus:border-[#c45572]"
-          />
-        </label>
-      </div>
-
-      <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-[#8a7d73]">
-        Description
-        <textarea
-          name="description"
-          defaultValue={event?.description ?? ""}
-          rows={3}
-          className="rounded-[6px] border border-[#eadfd4] px-3 py-2 text-sm font-bold normal-case leading-6 tracking-normal text-[#211f1d] outline-none transition focus:border-[#c45572]"
-        />
-      </label>
-
-      <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-[#8a7d73]">
-        Post idea
-        <textarea
-          name="prompt"
-          defaultValue={event?.prompt ?? ""}
-          rows={3}
-          className="rounded-[6px] border border-[#eadfd4] px-3 py-2 text-sm font-bold normal-case leading-6 tracking-normal text-[#211f1d] outline-none transition focus:border-[#c45572]"
-        />
-      </label>
-
-      <div>
-        <button
-          type="submit"
-          className="rounded-[6px] bg-[#211f1d] px-4 py-2 text-sm font-black text-white transition hover:bg-[#c45572]"
-        >
-          {submitLabel}
-        </button>
-      </div>
+      <input type="hidden" name="status" value={status} />
+      <button
+        type="submit"
+        disabled={disabled}
+        className="rounded-[6px] border border-[#eadfd4] bg-white px-3 py-2 text-xs font-black text-[#211f1d] transition hover:border-[#c45572] hover:text-[#c45572] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-[#eadfd4] disabled:hover:text-[#211f1d]"
+      >
+        {children}
+      </button>
     </form>
   );
+}
+
+function toCalendarModalEvent(event: {
+  id: string;
+  title: string;
+  description: string | null;
+  prompt: string | null;
+  eventType: string;
+  status: string;
+  visibility: string;
+  startsAt: Date;
+  endsAt: Date | null;
+}) {
+  return {
+    id: event.id,
+    title: event.title,
+    description: event.description ?? "",
+    prompt: event.prompt ?? "",
+    eventType: event.eventType,
+    status: event.status,
+    visibility: event.visibility,
+    startsAt: formatDateTimeInput(event.startsAt),
+    endsAt: event.endsAt ? formatDateTimeInput(event.endsAt) : "",
+  };
 }
 
 function formatDateTimeInput(value: Date) {

@@ -18,7 +18,9 @@ export function SocialSidebar({
 }: SocialSidebarProps) {
   const [events, setEvents] = useState<PublicCalendarEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<PublicCalendarEvent | null>(null);
+  const [showUpcomingEvents, setShowUpcomingEvents] = useState(false);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const [calendarError, setCalendarError] = useState("");
   const today = new Date();
   const eventsByDate = useMemo(() => groupEventsByDate(events), [events]);
   const calendarDays = getCurrentWeek(today, eventsByDate);
@@ -26,7 +28,7 @@ export function SocialSidebar({
     month: "long",
     year: "numeric",
   });
-  const nextEvents = calendarDays.filter((item) => item.event);
+  const weekEvents = calendarDays.flatMap((item) => item.events);
 
   useEffect(() => {
     let isMounted = true;
@@ -38,6 +40,9 @@ export function SocialSidebar({
         });
 
         if (!response.ok) {
+          if (isMounted) {
+            setCalendarError("Calendar is temporarily unavailable.");
+          }
           return;
         }
 
@@ -45,6 +50,11 @@ export function SocialSidebar({
 
         if (isMounted) {
           setEvents(data.events ?? []);
+          setCalendarError("");
+        }
+      } catch {
+        if (isMounted) {
+          setCalendarError("Calendar is temporarily unavailable.");
         }
       } finally {
         if (isMounted) {
@@ -80,11 +90,11 @@ export function SocialSidebar({
             <div
               key={item.isoDate}
               role="listitem"
-              aria-label={`${item.fullLabel}${item.event ? `, ${item.event.title} at ${formatEventTime(item.event.startsAt)}` : ""}`}
+              aria-label={`${item.fullLabel}${item.events.length ? `, ${item.events.length} event${item.events.length === 1 ? "" : "s"}` : ""}`}
               className={`relative min-h-16 rounded-[6px] border px-1.5 py-2 text-center transition ${
                 item.isToday
                   ? "border-[#211f1d] bg-[#fff176] shadow-[0_8px_18px_rgba(33,31,29,0.14)]"
-                  : item.event
+                  : item.events.length
                     ? "border-[#c45572] bg-[#fff8f2]"
                     : "border-[#eadfd4] bg-white"
               }`}
@@ -93,13 +103,22 @@ export function SocialSidebar({
                 {item.label}
               </p>
               <p className="mt-1 text-lg font-black leading-none text-[#211f1d]">{item.day}</p>
-              {item.event ? (
-                <span
-                  className={`mx-auto mt-2 block h-1.5 w-1.5 rounded-full ${
-                    item.isToday ? "bg-[#211f1d]" : "bg-[#c45572]"
-                  }`}
-                  aria-hidden="true"
-                />
+              {item.events.length ? (
+                <span className="mt-2 flex items-center justify-center gap-1" aria-hidden="true">
+                  {item.events.slice(0, 3).map((event) => (
+                    <span
+                      key={event.id}
+                      className={`block h-1.5 w-1.5 rounded-full ${
+                        item.isToday ? "bg-[#211f1d]" : "bg-[#c45572]"
+                      }`}
+                    />
+                  ))}
+                  {item.events.length > 3 ? (
+                    <span className="text-[9px] font-black text-[#c45572]">
+                      +{item.events.length - 3}
+                    </span>
+                  ) : null}
+                </span>
               ) : null}
             </div>
           ))}
@@ -109,38 +128,52 @@ export function SocialSidebar({
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-sm font-black text-[#211f1d]">Up next</h3>
             <span className="rounded-full bg-[#fff8f2] px-2.5 py-1 text-[11px] font-black text-[#8a7d73]">
-              {isLoadingEvents ? "Syncing" : `${nextEvents.length} events`}
+              {isLoadingEvents ? "Syncing" : `${weekEvents.length} events`}
             </span>
           </div>
+          {calendarError ? (
+            <p className="mt-3 rounded-[6px] border border-red-100 bg-red-50 p-3 text-xs font-bold leading-5 text-red-700">
+              {calendarError}
+            </p>
+          ) : null}
           <div className="mt-3 space-y-2">
-            {nextEvents.map((item) => (
+            {weekEvents.slice(0, 3).map((event) => (
               <button
                 type="button"
-                key={`${item.isoDate}-${item.event?.title}`}
+                key={event.id}
                 onClick={() => {
-                  setSelectedEvent(item.event ?? null);
+                  setSelectedEvent(event);
                 }}
                 className="w-full rounded-[6px] border border-[#eadfd4] bg-[#fff8f2] p-3 text-left transition hover:border-[#c45572] hover:bg-white"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-black text-[#211f1d]">
-                      {item.event?.title}
+                      {event.title}
                     </p>
                     <p className="mt-1 text-xs font-bold text-[#8a7d73]">
-                      {item.shortDate} · {item.event ? formatEventTime(item.event.startsAt) : ""}
+                      {formatEventShortDate(event.startsAt)} · {formatEventTime(event.startsAt)}
                     </p>
                   </div>
                   <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-[#c45572]">
-                    {formatEventType(item.event?.eventType)}
+                    {formatEventType(event.eventType)}
                   </span>
                 </div>
                 <p className="mt-2 text-xs font-bold leading-5 text-[#6f6259]">
-                  {item.event?.description ?? item.event?.prompt}
+                  {event.description ?? event.prompt}
                 </p>
               </button>
             ))}
-            {!nextEvents.length && !isLoadingEvents ? (
+            {weekEvents.length > 3 ? (
+              <button
+                type="button"
+                onClick={() => setShowUpcomingEvents(true)}
+                className="w-full rounded-[6px] border border-[#eadfd4] bg-white px-3 py-2 text-xs font-black text-[#211f1d] transition hover:border-[#c45572] hover:text-[#c45572]"
+              >
+                View all upcoming
+              </button>
+            ) : null}
+            {!weekEvents.length && !isLoadingEvents && !calendarError ? (
               <p className="rounded-[6px] border border-[#eadfd4] bg-[#fff8f2] p-3 text-xs font-bold leading-5 text-[#6f6259]">
                 No public post ideas scheduled for this week.
               </p>
@@ -166,7 +199,79 @@ export function SocialSidebar({
           onUsePostIdea={onUseCalendarPostIdea}
         />
       ) : null}
+
+      {showUpcomingEvents ? (
+        <UpcomingEventsModal
+          events={weekEvents}
+          onClose={() => setShowUpcomingEvents(false)}
+          onSelect={(event) => {
+            setShowUpcomingEvents(false);
+            setSelectedEvent(event);
+          }}
+        />
+      ) : null}
     </aside>
+  );
+}
+
+function UpcomingEventsModal({
+  events,
+  onClose,
+  onSelect,
+}: {
+  events: PublicCalendarEvent[];
+  onClose: () => void;
+  onSelect: (event: PublicCalendarEvent) => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#211f1d]/55 px-4 py-6 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="calendar-upcoming-title"
+    >
+      <div className="w-full max-w-md overflow-hidden rounded-[8px] border border-[#eadfd4] bg-white shadow-[0_24px_70px_rgba(33,31,29,0.28)]">
+        <div className="border-b border-[#f2e8df] bg-[#fffaf6] px-5 py-4">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#c45572]">
+            Bloom calendar
+          </p>
+          <h2 id="calendar-upcoming-title" className="mt-2 text-2xl font-black text-[#211f1d]">
+            Upcoming this week
+          </h2>
+        </div>
+        <div className="max-h-[60vh] space-y-2 overflow-y-auto px-5 py-5">
+          {events.map((event) => (
+            <button
+              type="button"
+              key={event.id}
+              onClick={() => onSelect(event)}
+              className="w-full rounded-[6px] border border-[#eadfd4] bg-[#fff8f2] p-3 text-left transition hover:border-[#c45572] hover:bg-white"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-black text-[#211f1d]">{event.title}</p>
+                  <p className="mt-1 text-xs font-bold text-[#8a7d73]">
+                    {formatEventShortDate(event.startsAt)} · {formatEventTime(event.startsAt)}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-[#c45572]">
+                  {formatEventType(event.eventType)}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+        <div className="flex justify-end border-t border-[#f2e8df] bg-[#fffaf6] px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-[6px] border border-[#eadfd4] bg-white px-4 py-2 text-sm font-black text-[#211f1d] transition hover:border-[#c45572] hover:text-[#c45572]"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -268,7 +373,7 @@ function getCurrentWeek(
         day: "numeric",
       }),
       isoDate: date.toISOString(),
-      event: eventsByDate.get(getDateKey(date))?.[0] ?? null,
+      events: eventsByDate.get(getDateKey(date)) ?? [],
       isToday: isSameDate(date, today),
     };
   });
@@ -298,6 +403,13 @@ function formatEventDate(value: string) {
     month: "long",
     day: "numeric",
     year: "numeric",
+  }).format(new Date(value));
+}
+
+function formatEventShortDate(value: string) {
+  return new Intl.DateTimeFormat("en", {
+    weekday: "short",
+    day: "numeric",
   }).format(new Date(value));
 }
 
