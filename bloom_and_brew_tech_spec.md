@@ -58,7 +58,7 @@ The next implementation phase should focus on:
 | Cafe Enthusiasts | Users interested in coffee culture, cafe spaces, and latte art |
 | Florist Enthusiasts | Users interested in flowers, bouquets, and plant styling |
 | Social Media Users | Users seeking aesthetic inspiration and community interaction |
-| Creators | Users who want topic ideas, content prompts, and trend-aware posting support |
+| Creators | Users who want topic ideas, post ideas, and trend-aware posting support |
 | Platform Admins | Users who manage accounts, posts, integrations, trends, and recommendation services |
 | Students/Lecturers | Academic demonstration and evaluation users |
 
@@ -332,18 +332,21 @@ Notifications are no longer configured from the post composer. The composer only
 # 6.7 Sidebar Calendar
 
 ## Description
-The right sidebar now shows a Bloom calendar card instead of the previous chat and live-room demo cards.
+The right sidebar now shows a database-backed Bloom calendar card instead of the previous chat and live-room demo cards. Admins manage the calendar from the dashboard, while public users view scheduled public post ideas and can reuse a post idea in the post composer.
 
 ## Features
 - Weekly calendar grid
 - Highlighted cafe/floral events
-- Static event prompts for content planning
+- PostgreSQL-backed event post ideas for content planning
 - Compact event indicators inside day cells
-- Scannable upcoming-events list with event type, time, and prompt detail
-- Accessible calendar labels for week days and scheduled prompts
+- Scannable upcoming-events list with event type, time, and post idea detail
+- Accessible calendar labels for week days and scheduled post ideas
+- Calendar event detail modal
+- Public "Use as post idea" action that prefills the post composer
+- Admin-managed event type, status, visibility, date, description, and post idea fields
 
-## Limitation
-The calendar is currently static and does not persist user-created events.
+## Persistence
+Calendar events are stored in PostgreSQL through Prisma in the `CalendarEvent` table. Public users only see events with `visibility = "PUBLIC"` and `status = "SCHEDULED"`. Admin-only, draft, completed, and cancelled events remain available in the admin management view.
 
 ---
 
@@ -440,6 +443,7 @@ The current feature phase introduces an admin-facing dashboard for managing the 
 GET /admin
 GET /admin/users
 GET /admin/posts
+GET /admin/calendar
 GET /admin/trends
 GET /admin/ai-suggestions
 GET /admin/integrations
@@ -455,6 +459,7 @@ The dashboard will help platform managers monitor users, posts, trends, integrat
 |---|---|
 | User Management | View registered users, profile details, follower/following counts, and post counts |
 | Post Management | Review Bloom & Brew posts, engagement counts, author details, and moderation actions |
+| Calendar Management | Create, edit, delete, filter, and schedule public or admin-only calendar post ideas |
 | Trend Management | Display trending keywords from Bloom, Reddit, and YouTube content |
 | AI Suggestions | Generate content ideas, hashtags, and creator prompts from trending topics |
 | Integration Management | Show Reddit and YouTube source status, fallback behavior, and API configuration state |
@@ -477,6 +482,7 @@ The dashboard will help platform managers monitor users, posts, trends, integrat
 |---|---|
 | Users | View users and account metrics implemented; search, pagination, admin edit page, feedback messages, and disable/reactivate status controls implemented |
 | Posts | View posts and engagement metrics implemented; search, status filtering, pagination, hide/restore, delete confirmation, and delete moderation controls implemented |
+| Calendar | Database-backed calendar events implemented; create, edit, delete, search, status/type filtering, pagination, visibility controls, and public post idea reuse implemented |
 | Trends | View trend signals implemented; featured trend and approval workflows remain backlog |
 | AI Suggestions | Rule-style suggestion view implemented; approve, dismiss, reuse, and persistence workflows remain backlog |
 | Integrations | Integration status view implemented; richer API health/fallback diagnostics remain backlog |
@@ -844,9 +850,12 @@ These routes load and create database-backed in-app notifications for the authen
 
 ```http
 POST /api/admin/login
+GET /api/calendar
 ```
 
 This route validates an existing user account with email and password, checks whether the account email is present in the server-side `ADMIN_EMAILS` allowlist, and creates the existing HTTP-only session cookie only for authorized admin users.
+
+`GET /api/calendar` returns scheduled public calendar events for the homepage sidebar. The endpoint filters out draft, cancelled, completed, and admin-only events.
 
 ### Planned Management Endpoints
 
@@ -855,6 +864,10 @@ GET /api/admin/users
 PATCH /api/admin/users/[id]
 GET /api/admin/posts
 DELETE /api/admin/posts/[id]
+GET /api/admin/calendar
+POST /api/admin/calendar
+PATCH /api/admin/calendar/[id]
+DELETE /api/admin/calendar/[id]
 GET /api/admin/trends
 GET /api/admin/integrations
 POST /api/admin/suggestions
@@ -869,6 +882,7 @@ These routes will support the Admin Insights Dashboard. They should return aggre
 |---|---|
 | `/api/admin/users` | Users, profiles, post counts, follower counts, following counts, account status |
 | `/api/admin/posts` | Bloom posts, authors, comments, likes, saves, shares, created dates |
+| `/api/admin/calendar` | Calendar event title, schedule, type, status, visibility, description, post idea, creator |
 | `/api/admin/trends` | Trending keywords, source counts, related posts |
 | `/api/admin/integrations` | Reddit status, YouTube status, fallback status, last fetch result |
 | `/api/admin/suggestions` | Content ideas, hashtag suggestions, trend summaries |
@@ -889,7 +903,7 @@ These routes will support the Admin Insights Dashboard. They should return aggre
 - Comments
 - Notifications
 - Sidebar calendar
-- Sidebar calendar with weekly prompts and upcoming-event details
+- Sidebar calendar with weekly post ideas and upcoming-event details
 - Trending tags
 
 ---
@@ -1192,9 +1206,11 @@ For a real deployed social network, strengthen the current custom auth with:
 - Explicit profile editor with Save and Cancel controls
 - Age-sorted combined feed across Bloom, Reddit, and YouTube posts
 - Sidebar calendar card
+- Database-backed calendar event model and public calendar API
+- Public calendar event modal with post idea reuse
 - Trends, Discover, and Community pages
 - Admin dashboard shell at `/admin`
-- Separate admin management pages for users, posts, trends, AI suggestions, and integrations
+- Separate admin management pages for users, posts, calendar, trends, AI suggestions, and integrations
 - Independent admin login page at `/admin/login`
 - `POST /api/admin/login`
 - Server-side admin dashboard route protection
@@ -1209,6 +1225,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Public Bloom post feed filters out hidden posts
 - Admin user search with paginated results
 - Admin post search and `VISIBLE`/`HIDDEN` status filtering with paginated results
+- Admin calendar create, edit, delete, search, status/type filtering, visibility controls, and paginated results
 - Admin action feedback for user edits, status changes, and post moderation actions
 - Delete confirmation for destructive admin post deletion
 - Admin mutation-level authorization checks for user edit/status and post moderation server actions
@@ -1233,6 +1250,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Notifications: in-app notifications are database-backed, with browser permission request but no push service worker
 - Media editing: CSS filters only
 - Geolocation: coordinate tagging only, no map/location search
+- Calendar events: event scheduling and post idea reuse are database-backed, but reminders, RSVP/save-event flows, and recurring events are not implemented
 - Reddit source: public JSON endpoint with fallback data; OAuth/API credentials are currently deferred
 - Trend analysis: keyword extraction exists, but it is not yet connected to admin-managed content suggestions
 - User management dashboard: user metrics, search, pagination, edit controls, disable/reactivate controls, and server-action authorization checks exist; dedicated admin management API routes remain incomplete
@@ -1336,6 +1354,6 @@ The public feed UX hardening milestone is now implemented on the current feature
 
 # 19. Conclusion
 
-Bloom & Brew Social is now a deployable social media prototype that combines Reddit-powered community content with core social media interactions. The application demonstrates the required social media platform fundamentals through a frontend demo experience: account creation, profile personalization, feed interactions, content sharing, notifications, following, media editing, calendar-based content prompts, and geolocation. Chat/calling and streaming are documented backlog items for future implementation.
+Bloom & Brew Social is now a deployable social media prototype that combines Reddit-powered community content with core social media interactions. The application demonstrates the required social media platform fundamentals through a frontend demo experience: account creation, profile personalization, feed interactions, content sharing, notifications, following, media editing, calendar-based post ideas, and geolocation. Chat/calling and streaming are documented backlog items for future implementation.
 
 The current version is suitable for academic demonstration and deployment. For the next assignment, the most important expansion is the Admin Insights Dashboard because it connects emerging technologies, richer data, recommendation services, and management functionality in one coherent enhancement. For production use, the remaining local/demo features should be replaced with persistent database storage, stronger account security, role-based authorization, and real-time infrastructure.

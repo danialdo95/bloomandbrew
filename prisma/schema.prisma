@@ -24,6 +24,7 @@ model User {
   followers Follow[] @relation("UserFollowers")
   notifications Notification[]
   oauthAccounts OAuthAccount[]
+  calendarEvents CalendarEvent[] @relation("CalendarEventCreator")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -209,4 +210,25 @@ model ExternalShare {
 
   @@unique([externalPostId, userIdentifier])
   @@index([externalPostId])
+}
+
+model CalendarEvent {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  prompt      String?
+  eventType   String   @default("CONTENT")
+  status      String   @default("SCHEDULED")
+  visibility  String   @default("PUBLIC")
+  startsAt    DateTime
+  endsAt      DateTime?
+  createdById String?
+  createdBy   User?    @relation("CalendarEventCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([startsAt])
+  @@index([status])
+  @@index([visibility])
+  @@index([createdById])
 }

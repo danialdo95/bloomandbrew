@@ -239,6 +239,17 @@ export function SocialApp({
     addNotification("Refreshing your feed...");
   }
 
+  function useCalendarPostIdea(postIdea: string) {
+    setContent(postIdea);
+    window.requestAnimationFrame(() => {
+      feedTopRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+    addNotification("Calendar post idea added to your composer.");
+  }
+
   return (
     <main className="overflow-x-clip bg-[#fffaf6]">
       <SocialHero
@@ -341,6 +352,7 @@ export function SocialApp({
         <SocialSidebar
           trends={trends}
           source={source}
+          onUseCalendarPostIdea={useCalendarPostIdea}
         />
       </section>
 

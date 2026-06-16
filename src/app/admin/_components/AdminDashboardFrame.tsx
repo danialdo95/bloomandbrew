@@ -8,6 +8,7 @@ const dashboardNav = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/posts", label: "Posts" },
+  { href: "/admin/calendar", label: "Calendar" },
   { href: "/admin/trends", label: "Trends" },
   { href: "/admin/ai-suggestions", label: "AI Suggestions" },
   { href: "/admin/integrations", label: "Integrations" },
