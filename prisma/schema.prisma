@@ -25,6 +25,7 @@ model User {
   notifications Notification[]
   oauthAccounts OAuthAccount[]
   calendarEvents CalendarEvent[] @relation("CalendarEventCreator")
+  aiSuggestions AiSuggestion[] @relation("AiSuggestionCreator")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -230,5 +231,26 @@ model CalendarEvent {
   @@index([startsAt])
   @@index([status])
   @@index([visibility])
+  @@index([createdById])
+}
+
+model AiSuggestion {
+  id              String   @id @default(cuid())
+  title           String
+  postIdea        String
+  hashtags        String[] @default([])
+  sourceTrend     String
+  provider        String   @default("LOCAL")
+  status          String   @default("PENDING")
+  eventType       String   @default("CONTENT")
+  calendarEventId String?
+  createdById     String?
+  createdBy       User?    @relation("AiSuggestionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([provider])
+  @@index([sourceTrend])
   @@index([createdById])
 }

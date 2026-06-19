@@ -466,7 +466,7 @@ The dashboard will help platform managers monitor users, posts, trends, integrat
 | Post Management | Review Bloom & Brew posts, engagement counts, author details, and moderation actions |
 | Calendar Management | Create, edit, delete, filter, and schedule public or admin-only calendar post ideas |
 | Trend Management | Display trending keywords from Bloom, Reddit, and YouTube content |
-| AI Suggestions | Generate content ideas, hashtags, and creator prompts from trending topics |
+| AI Suggestions | Generate provider-aware post ideas from trends, review them, and reuse approved ideas in the calendar |
 | Integration Management | Show Reddit and YouTube source status, fallback behavior, and API configuration state |
 
 ## Implemented Admin Access Controls
@@ -489,7 +489,7 @@ The dashboard will help platform managers monitor users, posts, trends, integrat
 | Posts | View posts and engagement metrics implemented; search, status filtering, pagination, hide/restore, delete confirmation, and delete moderation controls implemented |
 | Calendar | Database-backed calendar events implemented; create/edit modals, delete confirmation, search, status/type filtering, pagination, visibility controls, quick status actions, multiple public weekly events, sync error state, and public post idea reuse implemented |
 | Trends | View trend signals implemented; featured trend and approval workflows remain backlog |
-| AI Suggestions | Rule-style suggestion view implemented; approve, dismiss, reuse, and persistence workflows remain backlog |
+| AI Suggestions | Provider-aware suggestion workflow implemented with DeepSeek support, local trend-engine fallback, persisted suggestions, approve/delete controls, and add-to-calendar reuse |
 | Integrations | Integration status view implemented; richer API health/fallback diagnostics remain backlog |
 
 ## Emerging Technology Value
@@ -497,20 +497,24 @@ This module uses trend analytics, recommendation logic, and external API integra
 
 ---
 
-# 6.15 Planned AI-Assisted Content Suggestions
+# 6.15 AI-Assisted Content Suggestions
 
 ## Description
 The app already analyzes trending keywords through `src/lib/trends.ts`. The next step is to convert those signals into practical content suggestions for creators and admins.
 
-## Planned Suggestions
+## Implemented Suggestions
 - Post topic ideas based on trending keywords
 - Suggested cafe/florist hashtags
-- Short creator prompts for the post composer
+- Short post ideas for the calendar and composer
 - Trend summaries for admin review
 - Suggested content categories such as coffee, bouquet, plants, events, and cafe ambience
+- Provider-aware generation using DeepSeek when `DEEPSEEK_API_KEY` is configured
+- Local trend-engine fallback when no external API key is configured
+- Persisted admin review workflow with `PENDING`, `APPROVED`, and `ADDED_TO_CALENDAR` statuses, plus permanent suggestion deletion with confirmation
+- Add-to-calendar action that creates a draft public calendar post idea
 
-## Prototype Scope
-The first version can use rule-based recommendation logic from existing trend data. A later version can connect to a generative AI API for richer summaries, captions, and moderation assistance.
+## Current Scope
+Suggestions are stored in PostgreSQL through the `AiSuggestion` table. Generation uses DeepSeek when an API key is available and falls back to deterministic local trend templates when no key is configured, so the feature remains usable during local development, deployment, and demos.
 
 ---
 
@@ -550,7 +554,7 @@ The first version can use rule-based recommendation logic from existing trend da
 | FR-13 | System shall be accessible online | Implemented through Vercel deployment |
 | FR-14 | System shall support responsive design | Implemented with Tailwind responsive layouts |
 | FR-15 | Admins shall manage users, posts, trends, and integrations | Partially implemented; user edit/status controls and post moderation actions exist, while trend/integration workflows remain limited |
-| FR-16 | System shall generate content suggestions from trend data | Partially implemented through the AI Suggestions admin view; approval/reuse workflows remain backlog |
+| FR-16 | System shall generate content suggestions from trend data | Implemented with provider-aware AI Suggestions, local fallback generation, persisted review statuses, and calendar reuse |
 | FR-17 | Admins shall monitor external API and fallback status | Partially implemented through the Integration Management admin view |
 | FR-18 | Admins shall moderate or remove inappropriate Bloom posts | Implemented for Bloom posts through admin hide/restore and delete controls |
 
@@ -566,8 +570,8 @@ The first version can use rule-based recommendation logic from existing trend da
 | Usability | Easy-to-use interface | Modal auth, social feed, cards, clear actions |
 | Deployability | Online hosting | Vercel deployment using the Next.js framework preset |
 | Maintainability | Clear file separation | Social components, lib utilities, Prisma config, types, and app routes are separated |
-| Explainability | Insight features should be understandable | Planned suggestions should show which trend keyword or source influenced the recommendation |
-| Manageability | Added services should be controllable | Protected admin dashboard exposes user, post, trend, AI suggestion, and integration management views; action controls remain the next milestone |
+| Explainability | Insight features should be understandable | Suggestions show the provider and source trend keyword that influenced each recommendation |
+| Manageability | Added services should be controllable | Protected admin dashboard exposes user, post, calendar, trend, AI suggestion, and integration management views with action controls for users, posts, calendar events, and suggestions |
 
 ---
 
@@ -862,7 +866,7 @@ This route validates an existing user account with email and password, checks wh
 
 `GET /api/calendar` returns scheduled public calendar events for the homepage sidebar. The endpoint filters out draft, cancelled, completed, and admin-only events.
 
-### Planned Management Endpoints
+### Planned Dedicated Management Endpoints
 
 ```http
 GET /api/admin/users
@@ -879,7 +883,7 @@ POST /api/admin/suggestions
 ```
 
 ### Description
-These routes will support the Admin Insights Dashboard. They should return aggregated user, post, engagement, trend, and integration information for management workflows. Dashboard page access is currently restricted to authorized admin users through server-side session checks and the `ADMIN_EMAILS` allowlist. Dedicated management API routes still need the same admin authorization checks before mutation actions are added.
+The admin dashboard currently uses protected server-rendered pages and server actions for user, post, calendar, and suggestion workflows. Dedicated management API routes remain a future hardening option for separating dashboard data access from page rendering. Dashboard page access is currently restricted to authorized admin users through server-side session checks and the `ADMIN_EMAILS` allowlist.
 
 ### Planned Response Data
 
@@ -890,7 +894,7 @@ These routes will support the Admin Insights Dashboard. They should return aggre
 | `/api/admin/calendar` | Calendar event title, schedule, type, status, visibility, description, post idea, creator |
 | `/api/admin/trends` | Trending keywords, source counts, related posts |
 | `/api/admin/integrations` | Reddit status, YouTube status, fallback status, last fetch result |
-| `/api/admin/suggestions` | Content ideas, hashtag suggestions, trend summaries |
+| `/api/admin/suggestions` | Provider-aware post ideas, hashtags, source trend, provider, status, calendar reuse state |
 
 ---
 
@@ -1258,11 +1262,9 @@ For a real deployed social network, strengthen the current custom auth with:
 - Geolocation: coordinate tagging only, no map/location search
 - Calendar events: event scheduling and post idea reuse are database-backed, but reminders, RSVP/save-event flows, and recurring events are not implemented
 - Reddit source: public JSON endpoint with fallback data; OAuth/API credentials are currently deferred
-- Trend analysis: keyword extraction exists, but it is not yet connected to admin-managed content suggestions
 - User management dashboard: user metrics, search, pagination, edit controls, disable/reactivate controls, and server-action authorization checks exist; dedicated admin management API routes remain incomplete
 - Post management dashboard: post and engagement data, search, status filtering, pagination, hide/restore, delete confirmation, delete controls, and server-action authorization checks exist; dedicated admin management API routes remain incomplete
-- Trend management dashboard: trend signals can be viewed, but approval/featured workflows are not complete
-- AI-assisted content suggestion workflow: suggestion view exists, but approval, dismissal, reuse, and persistence are not complete
+- Trend management dashboard: trend signals can be viewed and feed AI Suggestions, but approval/featured trend workflows are not complete
 - Integration management dashboard: integration status view exists, but richer health/fallback diagnostics are not complete
 - Share analytics: share counters persist, but selected platform/method is not yet persisted for analytics
 
@@ -1296,7 +1298,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Chat and live-room features are currently hidden and tracked as backlog items
 - Admin access is controlled by an `ADMIN_EMAILS` allowlist instead of a database-backed role field
 - Admin management pages include search, pagination, server-action authorization checks, user status/edit controls, post moderation controls, and disabled-user enforcement
-- Trend keywords are displayed, but there is no approval workflow or content suggestion management yet
+- Trend keywords are displayed and feed the provider-aware AI Suggestions workflow, but there is no featured-trend approval workflow yet
 
 ---
 
@@ -1305,7 +1307,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Add admin-only management API routes with authorization checks
 - Add database-backed admin roles
 - Add trend approval/featured workflows using the existing keyword analysis utility
-- Add AI-style suggestion approval, dismissal, and reuse workflows
+- Add richer analytics for AI suggestion outcomes and calendar conversion rates
 - Add richer integration health cards for Reddit and YouTube
 - Add share analytics by platform/method
 - Expand OAuth support beyond Google or migrate to Auth.js/Supabase Auth for a production-grade provider layer
@@ -1346,10 +1348,10 @@ The public feed UX hardening milestone is now implemented on the current feature
 - Migrate admin access from `ADMIN_EMAILS` to database-backed authorization
 - Keep `ADMIN_EMAILS` only as a local bootstrap option if needed
 
-## Priority 3: Trend and AI Suggestion Management
-- Reuse `src/lib/trends.ts` to generate dashboard trend keywords
-- Generate simple content ideas and hashtags from trend keywords
-- Allow suggestions to be approved, dismissed, or reused as creator prompts
+## Priority 3: Trend Management and Suggestion Analytics
+- Add featured-trend approval and pinning workflows
+- Track which generated suggestions are approved and converted to calendar events
+- Report suggestion provider usage across DeepSeek and the local trend engine
 
 ## Priority 4: Integration Management
 - Display Reddit and YouTube source status

@@ -51,21 +51,6 @@ function toTrendPost(id: string, title: string, createdAt: Date | string): Reddi
   };
 }
 
-export function getSuggestion(keyword: string, index: number) {
-  const angles = [
-    "Turn this into a cafe visit prompt with a clear photo idea.",
-    "Pair this topic with a bouquet styling tip for creators.",
-    "Use this as a short trend summary for the weekly community post.",
-    "Create a discussion question that invites comments from followers.",
-  ];
-
-  return {
-    title: `${keyword} content idea`,
-    detail: angles[index % angles.length],
-    hashtags: [`#${keyword.replace(/[^a-z0-9]/gi, "")}`, "#BloomAndBrew", "#CafeFlorals"],
-  };
-}
-
 export async function getAdminOverview() {
   const [
     redditFeed,
@@ -272,6 +257,46 @@ export async function getAdminCalendarEvents({
 
   return {
     events,
+    pagination: getAdminPagination(total, page),
+  };
+}
+
+export async function getAdminAiSuggestions({
+  page = 1,
+  status = "all",
+}: {
+  page?: number;
+  status?: string;
+} = {}) {
+  const statusFilter = status.toUpperCase();
+  const statusWhere = statusFilter === "PENDING"
+    || statusFilter === "APPROVED"
+    || statusFilter === "ADDED_TO_CALENDAR"
+    ? { status: statusFilter }
+    : {};
+
+  const [suggestions, total] = await Promise.all([
+    prisma.aiSuggestion.findMany({
+      where: statusWhere,
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip: (page - 1) * ADMIN_PAGE_SIZE,
+      take: ADMIN_PAGE_SIZE,
+      include: {
+        createdBy: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+    }),
+    prisma.aiSuggestion.count({ where: statusWhere }),
+  ]);
+
+  return {
+    suggestions,
     pagination: getAdminPagination(total, page),
   };
 }
