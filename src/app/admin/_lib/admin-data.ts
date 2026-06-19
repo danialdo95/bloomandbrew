@@ -271,7 +271,6 @@ export async function getAdminAiSuggestions({
   const statusFilter = status.toUpperCase();
   const statusWhere = statusFilter === "PENDING"
     || statusFilter === "APPROVED"
-    || statusFilter === "DISMISSED"
     || statusFilter === "ADDED_TO_CALENDAR"
     ? { status: statusFilter }
     : {};

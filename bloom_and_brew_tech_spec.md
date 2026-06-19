@@ -489,7 +489,7 @@ The dashboard will help platform managers monitor users, posts, trends, integrat
 | Posts | View posts and engagement metrics implemented; search, status filtering, pagination, hide/restore, delete confirmation, and delete moderation controls implemented |
 | Calendar | Database-backed calendar events implemented; create/edit modals, delete confirmation, search, status/type filtering, pagination, visibility controls, quick status actions, multiple public weekly events, sync error state, and public post idea reuse implemented |
 | Trends | View trend signals implemented; featured trend and approval workflows remain backlog |
-| AI Suggestions | Provider-aware suggestion workflow implemented with DeepSeek support, local trend-engine fallback, persisted suggestions, approve/dismiss controls, and add-to-calendar reuse |
+| AI Suggestions | Provider-aware suggestion workflow implemented with DeepSeek support, local trend-engine fallback, persisted suggestions, approve/delete controls, and add-to-calendar reuse |
 | Integrations | Integration status view implemented; richer API health/fallback diagnostics remain backlog |
 
 ## Emerging Technology Value
@@ -510,7 +510,7 @@ The app already analyzes trending keywords through `src/lib/trends.ts`. The next
 - Suggested content categories such as coffee, bouquet, plants, events, and cafe ambience
 - Provider-aware generation using DeepSeek when `DEEPSEEK_API_KEY` is configured
 - Local trend-engine fallback when no external API key is configured
-- Persisted admin review workflow with `PENDING`, `APPROVED`, `DISMISSED`, and `ADDED_TO_CALENDAR` statuses
+- Persisted admin review workflow with `PENDING`, `APPROVED`, and `ADDED_TO_CALENDAR` statuses, plus permanent suggestion deletion with confirmation
 - Add-to-calendar action that creates a draft public calendar post idea
 
 ## Current Scope
@@ -1350,7 +1350,7 @@ The public feed UX hardening milestone is now implemented on the current feature
 
 ## Priority 3: Trend Management and Suggestion Analytics
 - Add featured-trend approval and pinning workflows
-- Track which generated suggestions are approved, dismissed, and converted to calendar events
+- Track which generated suggestions are approved and converted to calendar events
 - Report suggestion provider usage across DeepSeek and the local trend engine
 
 ## Priority 4: Integration Management

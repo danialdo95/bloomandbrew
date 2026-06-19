@@ -24,7 +24,7 @@ type AdminAiSuggestionsPageProps = {
   }>;
 };
 
-const suggestionStatuses = ["PENDING", "APPROVED", "DISMISSED", "ADDED_TO_CALENDAR"];
+const suggestionStatuses = ["PENDING", "APPROVED", "ADDED_TO_CALENDAR"];
 
 async function ensureAdminAction() {
   const user = await getCurrentUser();
@@ -59,8 +59,8 @@ function getFeedbackMessage(value?: string) {
     return "Suggestion was approved.";
   }
 
-  if (value === "dismissed") {
-    return "Suggestion was dismissed.";
+  if (value === "deleted") {
+    return "Suggestion was deleted.";
   }
 
   if (value === "calendar") {
@@ -117,7 +117,7 @@ async function updateSuggestionStatus(formData: FormData) {
   const status = getString(formData, "status").toUpperCase();
   const returnTo = getReturnTo(formData.get("returnTo"));
 
-  if (!suggestionId || (status !== "APPROVED" && status !== "DISMISSED")) {
+  if (!suggestionId || status !== "APPROVED") {
     return;
   }
 
@@ -131,7 +131,28 @@ async function updateSuggestionStatus(formData: FormData) {
   });
 
   revalidatePath("/admin/ai-suggestions");
-  redirect(withFeedback(returnTo, status === "APPROVED" ? "approved" : "dismissed"));
+  redirect(withFeedback(returnTo, "approved"));
+}
+
+async function deleteSuggestion(formData: FormData) {
+  "use server";
+
+  await ensureAdminAction();
+  const suggestionId = getString(formData, "suggestionId");
+  const returnTo = getReturnTo(formData.get("returnTo"));
+
+  if (!suggestionId) {
+    return;
+  }
+
+  await prisma.aiSuggestion.delete({
+    where: {
+      id: suggestionId,
+    },
+  });
+
+  revalidatePath("/admin/ai-suggestions");
+  redirect(withFeedback(returnTo, "deleted"));
 }
 
 async function addSuggestionToCalendar(formData: FormData) {
@@ -326,19 +347,18 @@ export default async function AdminAiSuggestionsPage({
                       Add to calendar
                     </button>
                   </form>
-                  <form action={updateSuggestionStatus}>
+                  <form action={deleteSuggestion}>
                     <input type="hidden" name="suggestionId" value={suggestion.id} />
-                    <input type="hidden" name="status" value="DISMISSED" />
                     <input type="hidden" name="returnTo" value={returnTo} />
                     <AdminConfirmSubmitButton
-                      title="Dismiss this suggestion?"
-                      message="This suggestion will be marked as dismissed and removed from the active review flow."
-                      confirmLabel="Dismiss"
-                      warningTitle="Review action"
-                      warningMessage="Dismissed suggestions stay stored for audit and comparison."
+                      title="Delete this suggestion?"
+                      message="This suggestion will be permanently removed from the review workflow."
+                      confirmLabel="Delete"
+                      warningTitle="Permanent deletion"
+                      warningMessage="This cannot be undone. Any calendar event previously created from this suggestion will remain available."
                       className="rounded-[6px] border border-red-200 bg-red-50 px-3 py-2 text-xs font-black text-red-700 transition hover:border-red-400"
                     >
-                      Dismiss
+                      Delete
                     </AdminConfirmSubmitButton>
                   </form>
                 </div>
