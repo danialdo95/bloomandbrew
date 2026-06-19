@@ -50,17 +50,11 @@ export default async function AdminLoginPage() {
               Admin dashboard
             </h2>
             <p className="mt-3 text-sm font-bold leading-6 text-[#756b63]">
-              Use an existing Bloom & Brew account whose email is listed in the
-              server-side admin allowlist.
+              Sign in with an authorized Bloom & Brew administrator account to
+              manage platform activity and content operations.
             </p>
 
             <AdminLoginForm />
-
-            <p className="mt-5 text-xs font-bold leading-5 text-[#756b63]">
-              Set <span className="font-black text-[#211f1d]">ADMIN_EMAILS</span>{" "}
-              with comma-separated admin account emails before testing this
-              page in a new environment.
-            </p>
           </div>
         </section>
       </div>

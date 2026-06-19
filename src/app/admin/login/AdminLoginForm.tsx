@@ -52,34 +52,32 @@ export function AdminLoginForm() {
           onChange={(event) => setEmail(event.target.value)}
           required
           className="h-12 rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-4 text-base font-bold text-[#211f1d] outline-none transition placeholder:text-[#a69990] focus:border-[#c45572] focus:bg-white"
-          placeholder="admin@bloomandbrew.test"
+          placeholder="admin@bloombrew.com"
         />
       </label>
 
       <label className="grid gap-2 text-sm font-black text-[#211f1d]">
-  Password
+        Password
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            className="h-12 w-full rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-4 pr-16 text-base"
+            placeholder="Enter admin password"
+          />
 
-  <div className="relative">
-    <input
-      type={showPassword ? "text" : "password"}
-      autoComplete="current-password"
-      value={password}
-      onChange={(event) => setPassword(event.target.value)}
-      required
-      className="h-12 w-full rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] px-4 pr-16 text-base"
-      placeholder="Enter admin password"
-    />
-
-    <button
-      type="button"
-      onClick={() => setShowPassword(!showPassword)}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-sm"
-    >
-      {showPassword ? "Hide" : "Show"}
-    </button>
-  </div>
-
-</label>
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-sm"
+          >
+            {showPassword ? "Hide" : "Show"}
+          </button>
+        </div>
+      </label>
 
       {error ? (
         <p className="rounded-[6px] border border-[#f0c8c8] bg-[#fff1f1] px-4 py-3 text-sm font-bold text-[#9f2f42]">

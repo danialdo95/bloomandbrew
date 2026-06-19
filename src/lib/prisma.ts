@@ -25,7 +25,8 @@ function hasCurrentDelegates(client: PrismaClient) {
     delegates.postShare
       && delegates.externalShare
       && delegates.notification
-      && delegates.calendarEvent,
+      && delegates.calendarEvent
+      && delegates.aiSuggestion,
   );
 }
 

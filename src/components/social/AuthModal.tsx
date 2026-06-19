@@ -106,7 +106,17 @@ export function AuthModal({
           </label>
 
           <label className="block">
-            <span className="text-sm font-black text-[#211f1d]">Password</span>
+            <span className="flex items-center justify-between gap-3">
+              <span className="text-sm font-black text-[#211f1d]">Password</span>
+              {authMode === "signin" ? (
+                <a
+                  href="mailto:support@bloombrew.com?subject=Bloom%20%26%20Brew%20password%20reset"
+                  className="text-xs font-black text-[#c45572] transition hover:text-[#211f1d]"
+                >
+                  Forgot password?
+                </a>
+              ) : null}
+            </span>
             <input
               type="password"
               value={authPassword}
@@ -138,9 +148,6 @@ export function AuthModal({
                 : "Create account"}
           </button>
 
-          <p className="text-center text-xs font-bold leading-5 text-[#8a7d73]">
-            Bloom & Brew is a social experiment and not a real social network.
-          </p>
         </form>
 
         <div className="mt-5">
@@ -160,6 +167,17 @@ export function AuthModal({
             </span>
             Continue with Google
           </a>
+          {authMode === "signin" ? (
+            <p className="mt-4 text-center text-xs font-bold text-[#8a7d73]">
+              Admin access?{" "}
+              <a
+                href="/admin/login"
+                className="font-black text-[#c45572] transition hover:text-[#211f1d]"
+              >
+                Sign in to admin dashboard
+              </a>
+            </p>
+          ) : null}
         </div>
       </div>
     </div>
