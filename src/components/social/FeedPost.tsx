@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 
 import { LoadingSpinner } from "@/components/social/LoadingSpinner";
 import { filterClasses, filterStyles, getTimeLabel } from "@/lib/social";
-import type { PostShareMethod, SocialPost } from "@/types/social";
+import type { PostShareMethod, SocialComment, SocialPost } from "@/types/social";
 
 export type FeedPostPendingAction =
   | "like"
@@ -44,12 +44,15 @@ export function FeedPost({
   const [menuOpen, setMenuOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [contentExpanded, setContentExpanded] = useState(false);
+  const [expandedComments, setExpandedComments] = useState<SocialComment[] | null>(null);
+  const [commentsError, setCommentsError] = useState("");
+  const [commentsLoading, setCommentsLoading] = useState(false);
   const commentInputRef = useRef<HTMLInputElement | null>(null);
   const userCommentCount = post.comments.filter((comment) => !comment.system).length;
   const commentCount =
     post.source === "reddit" || post.source === "youtube"
       ? (post.externalCommentCount ?? 0) + userCommentCount
-      : post.comments.length;
+      : (post.commentCount ?? post.comments.length);
   const isBloomPost = post.source === "bloom";
   const profileHref = `/users/${post.username}`;
   const isBusy = Boolean(pendingAction);
@@ -60,6 +63,40 @@ export function FeedPost({
   const visibleContent = contentCanCollapse && !contentExpanded
     ? `${post.content.slice(0, 260).trimEnd()}...`
     : post.content;
+  const visibleComments = expandedComments
+    ? mergeComments(expandedComments, post.comments)
+    : post.comments.slice(-3);
+
+  async function toggleAllComments() {
+    if (expandedComments) {
+      setExpandedComments(null);
+      setCommentsError("");
+      return;
+    }
+
+    setCommentsLoading(true);
+    setCommentsError("");
+
+    try {
+      const response = await fetch(`/api/posts/${post.id}/comments`);
+      const data = (await response.json()) as {
+        comments?: SocialComment[];
+        error?: string;
+      };
+
+      if (!response.ok || !data.comments) {
+        throw new Error(data.error ?? "Comments could not be loaded.");
+      }
+
+      setExpandedComments(data.comments);
+    } catch (error) {
+      setCommentsError(
+        error instanceof Error ? error.message : "Comments could not be loaded.",
+      );
+    } finally {
+      setCommentsLoading(false);
+    }
+  }
 
   async function copyShareLink() {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -249,6 +286,7 @@ export function FeedPost({
         <div className="px-4 pb-4 sm:px-5">
           <div className="overflow-hidden rounded-[6px] border border-[#eadfd4] bg-[#211f1d]">
             <iframe
+              loading="lazy"
               className="aspect-video w-full"
               src={`https://www.youtube.com/embed/${post.youtubeVideoId}?autoplay=0&rel=0`}
               title={post.content}
@@ -272,6 +310,8 @@ export function FeedPost({
           <div className="aspect-[4/3] overflow-hidden rounded-[6px] border border-[#eadfd4] bg-[#fff8f2] sm:aspect-video">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
+              loading="lazy"
+              decoding="async"
               src={post.imageUrl}
               alt=""
               className={`h-full w-full object-cover ${filterClasses[post.filter]}`}
@@ -385,7 +425,28 @@ export function FeedPost({
       ) : null}
 
       <div className="space-y-3 px-4 py-4 sm:px-5 sm:py-5">
-        {post.comments.slice(-3).map((comment) => (
+        {isBloomPost && commentCount > 3 ? (
+          <button
+            type="button"
+            onClick={() => void toggleAllComments()}
+            disabled={commentsLoading}
+            aria-expanded={Boolean(expandedComments)}
+            className="flex items-center gap-2 text-sm font-black text-[#c45572] transition hover:text-[#9f3f59] disabled:cursor-wait disabled:opacity-60"
+          >
+            {commentsLoading ? <LoadingSpinner className="h-3 w-3" /> : null}
+            {commentsLoading
+              ? "Loading comments..."
+              : expandedComments
+                ? "Show fewer comments"
+                : `View all ${commentCount.toLocaleString()} comments`}
+          </button>
+        ) : null}
+        {commentsError ? (
+          <p className="text-sm font-bold text-red-700" role="alert">
+            {commentsError}
+          </p>
+        ) : null}
+        {visibleComments.map((comment) => (
           <div key={comment.id} className="rounded-[6px] bg-[#fff8f2] px-4 py-3">
             <p className="text-sm font-black text-[#211f1d]">{comment.author}</p>
             <p className="mt-1 text-sm leading-6 text-[#6f6259]">{comment.text}</p>
@@ -413,6 +474,19 @@ export function FeedPost({
       </div>
     </article>
   );
+}
+
+function mergeComments(allComments: SocialComment[], latestComments: SocialComment[]) {
+  const comments = [...allComments];
+  const commentIds = new Set(comments.map((comment) => comment.id));
+
+  for (const comment of latestComments) {
+    if (!commentIds.has(comment.id)) {
+      comments.push(comment);
+    }
+  }
+
+  return comments;
 }
 
 function PostActionButton({

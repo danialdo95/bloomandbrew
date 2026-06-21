@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { decodePostCursor, encodePostCursor } from "@/lib/post-cursor";
 import { getYouTubeVideoId, getYouTubeWatchUrl } from "@/lib/youtube-url";
 import type { SocialPost } from "@/types/social";
 
@@ -25,6 +26,7 @@ function toSocialPost(post: {
     userIdentifier: string;
   }[];
   _count: {
+    comments: number;
     likes: number;
     shares: number;
   };
@@ -53,7 +55,7 @@ function toSocialPost(post: {
     createdAt: post.createdAt.toISOString(),
     likes: post._count.likes,
     shares: post._count.shares,
-    comments: post.comments.map((comment) => ({
+    comments: [...post.comments].reverse().map((comment) => ({
       id: comment.id,
       author: comment.authorName,
       text: comment.text,
@@ -62,14 +64,28 @@ function toSocialPost(post: {
     bookmarked: viewer
       ? post.savedBy.some((save) => save.userIdentifier === viewer)
       : false,
+    commentCount: post._count.comments,
   };
 }
+
+const DEFAULT_PAGE_SIZE = 15;
+const MAX_PAGE_SIZE = 30;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const user = await getCurrentUser();
-  const viewer = user?.id ?? searchParams.get("viewer") ?? undefined;
+  const viewer = user?.id;
   const feed = searchParams.get("feed");
+  const limitParam = searchParams.get("limit");
+  const requestedLimit = limitParam === null ? Number.NaN : Number(limitParam);
+  const limit = Number.isInteger(requestedLimit)
+    ? Math.min(Math.max(requestedLimit, 1), MAX_PAGE_SIZE)
+    : DEFAULT_PAGE_SIZE;
+  const cursor = decodePostCursor(searchParams.get("cursor"));
+
+  if (searchParams.has("cursor") && !cursor) {
+    return NextResponse.json({ error: "Invalid pagination cursor." }, { status: 400 });
+  }
 
   if (feed === "following" && !user) {
     return NextResponse.json(
@@ -90,7 +106,7 @@ export async function GET(request: Request) {
         })
       ).map((follow) => follow.followingId)
     : [];
-  const where = feed === "following" && user
+  const feedWhere = feed === "following" && user
     ? {
         status: "VISIBLE",
         authorId: {
@@ -100,6 +116,15 @@ export async function GET(request: Request) {
     : {
         status: "VISIBLE",
       };
+  const where = cursor
+    ? {
+        ...feedWhere,
+        OR: [
+          { createdAt: { lt: new Date(cursor.createdAt) } },
+          { createdAt: new Date(cursor.createdAt), id: { lt: cursor.id } },
+        ],
+      }
+    : feedWhere;
 
   const posts = await prisma.post.findMany({
     where,
@@ -107,8 +132,9 @@ export async function GET(request: Request) {
       author: true,
       comments: {
         orderBy: {
-          createdAt: "asc",
+          createdAt: "desc",
         },
+        take: 3,
       },
       likes: {
         where: {
@@ -130,17 +156,21 @@ export async function GET(request: Request) {
         select: {
           likes: true,
           shares: true,
+          comments: true,
         },
       },
     },
-    orderBy: {
-      createdAt: "desc",
-    },
-    take: 30,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: limit + 1,
   });
 
+  const hasMore = posts.length > limit;
+  const page = hasMore ? posts.slice(0, limit) : posts;
+  const lastPost = page.at(-1);
+
   return NextResponse.json({
-    posts: posts.map((post) => toSocialPost(post, viewer)),
+    posts: page.map((post) => toSocialPost(post, viewer)),
+    nextCursor: hasMore && lastPost ? encodePostCursor(lastPost) : null,
   });
 }
 
@@ -205,6 +235,7 @@ export async function POST(request: Request) {
         select: {
           likes: true,
           shares: true,
+          comments: true,
         },
       },
     },

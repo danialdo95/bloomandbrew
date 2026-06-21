@@ -2,6 +2,8 @@
 ## Technical Specification Document
 ### CSC795 - Social Media Ecosystem Assignment
 
+**Current implementation update:** 21 June 2026 — feed performance hardening, cursor pagination, batched external interaction synchronization, expandable Bloom comment threads, and feed-scale test data are implemented on `codex/feed-performance-hardening`.
+
 ---
 
 # 1. Project Overview
@@ -14,7 +16,7 @@ Bloom & Brew Social is a web-based social media prototype focused on cafe cultur
 
 The latest implementation is no longer only a dashboard. It now behaves like a social media application where users can create an account, personalize a profile, publish posts, attach image or YouTube media links, interact with posts, follow suggested creators, receive in-app notifications, use a sidebar calendar, add image filters, and tag locations.
 
-The first database migration steps have also been completed. User accounts, user account status, sessions, user-created posts, post moderation status, comments, likes, saves/bookmarks, shares, notifications, and follow relationships are now stored in PostgreSQL through Prisma ORM. Polls remain browser-local, while chat/calling and live-room features are tracked as backlog items.
+The database-backed social layer and the latest feed performance milestone have also been completed. User accounts, user account status, sessions, user-created posts, post moderation status, comments, likes, saves/bookmarks, shares, notifications, and follow relationships are stored in PostgreSQL through Prisma ORM. The public feed now uses stable cursor pagination, bounded initial source results, lazy media loading, batched external interaction lookups, and on-demand access to complete Bloom comment threads. Polls remain browser-local, while chat/calling and live-room features are tracked as backlog items.
 
 The application demonstrates:
 - Managed communities
@@ -90,11 +92,14 @@ Browser UI (Next.js App Router)
         |      |-- normalized video posts
         |
         |-- Next.js API Route: /api/posts
+        |      |-- stable createdAt + id cursor pagination
+        |      |-- bounded latest-comment previews and total counts
         |      |-- Prisma client: src/lib/prisma.ts
         |      |-- PostgreSQL database
         |
         |-- Next.js API Routes: /api/external-posts/*
         |      |-- mirrors Reddit/YouTube identifiers
+        |      |-- bounded batch synchronization and validation
         |      |-- persists comments, likes, saves, and shares
         |
         |-- Next.js API Route: /api/notifications
@@ -124,13 +129,13 @@ Browser UI (Next.js App Router)
 ```text
 Reddit API ──→ src/lib/reddit.ts ──→ server-rendered homepage ──┐
 YouTube API ─→ /api/youtube ─→ normalized video posts ───────────┼─→ SocialApp feed
-PostgreSQL ─→ Prisma ─→ /api/posts ──────────────────────────────┘
+PostgreSQL ─→ Prisma ─→ /api/posts?limit=15&cursor=... ───────────┘
 
 User-created posts:
 SocialApp composer ─→ POST /api/posts ─→ Prisma ─→ PostgreSQL
 
 External interactions:
-Reddit/YouTube post IDs ─→ /api/external-posts/* ─→ Prisma ─→ PostgreSQL
+Reddit/YouTube post IDs ─→ bounded batch sync ─→ Prisma group queries ─→ PostgreSQL
 
 Remaining demo-only state:
 polls ─→ localStorage or React state
@@ -197,6 +202,8 @@ If Reddit requests fail or return no usable posts, the app uses curated fallback
 
 YouTube follows the same public-feed resilience pattern. If the YouTube Data API key is missing or a request fails, the app shows curated video-inspiration posts instead of exposing setup-looking placeholder text in the public feed.
 
+To keep the initial feed bounded, Reddit requests four items from each configured subreddit and the homepage uses up to 12 normalized Reddit posts. YouTube requests and displays up to eight videos. These limits reduce server payload size and client rendering work while retaining all configured content sources.
+
 ---
 
 # 6.2 Social Feed
@@ -210,6 +217,9 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Database-backed user-created posts
 - Server-rendered initial feed composition for Reddit and YouTube content
 - Unified age sorting across Bloom, Reddit, and YouTube sources
+- Stable cursor pagination for Bloom posts using `createdAt` and `id`
+- Fifteen Bloom posts per database page with an explicit Load more action
+- Bounded initial composition of up to 12 Reddit and 8 YouTube posts
 - Admin-only source-aware feed status strip for Bloom, Reddit, YouTube, and engagement sync
 - Themed feed skeleton loading cards
 - Post source badges for Bloom, Reddit, YouTube, and curated fallback content
@@ -227,10 +237,13 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - Location tagging
 - Like button
 - Comment system
+- Latest-three Bloom comment preview with an accurate total count
+- On-demand View all comments and Show fewer comments controls for Bloom posts
 - Share counter
 - Save/bookmark state
 - Themed delete confirmation modal for deleting a user's own feed posts
 - Embedded YouTube videos inside feed posts
+- Lazy image decoding and lazy image/YouTube iframe loading
 - Composer preview for pasted YouTube watch, Shorts, embed, live, and youtu.be links
 - Composer blocks post publishing when a pasted media link cannot be previewed
 
@@ -247,6 +260,7 @@ The homepage is a social feed powered by Reddit posts, YouTube video suggestions
 - The Following feed can filter database-backed posts to the signed-in user's own posts and posts from followed creators.
 - Shares are saved in PostgreSQL for both Bloom posts and Reddit/YouTube external posts.
 - Database-backed notifications are shown in the navbar bell dropdown.
+- External post metadata and interaction statistics are synchronized through bounded batch operations instead of per-post query fan-out.
 
 ---
 
@@ -557,6 +571,10 @@ Suggestions are stored in PostgreSQL through the `AiSuggestion` table. Generatio
 | FR-16 | System shall generate content suggestions from trend data | Implemented with provider-aware AI Suggestions, local fallback generation, persisted review statuses, and calendar reuse |
 | FR-17 | Admins shall monitor external API and fallback status | Partially implemented through the Integration Management admin view |
 | FR-18 | Admins shall moderate or remove inappropriate Bloom posts | Implemented for Bloom posts through admin hide/restore and delete controls |
+| FR-19 | System shall load Bloom feed posts incrementally | Implemented with stable cursor pagination and a Load more action |
+| FR-20 | Users shall access complete Bloom comment threads without loading every comment initially | Implemented with latest-three previews and on-demand View all/Show fewer controls |
+| FR-21 | System shall synchronize external interaction statistics efficiently and safely | Implemented with bounded validation, batch inserts, grouped queries, and instance-local throttling |
+| FR-22 | Developers shall be able to generate feed-scale test data | Implemented with an idempotent 35-post feed seed command |
 
 ---
 
@@ -564,9 +582,9 @@ Suggestions are stored in PostgreSQL through the `AiSuggestion` table. Generatio
 
 | Requirement | Description | Current Approach |
 |---|---|---|
-| Performance | Page load should remain fast | Reddit fetch is cached/revalidated; fallback data is available |
+| Performance | Page load should remain fast | Reddit/YouTube result counts are bounded; Bloom posts use cursor pagination; comment previews are limited to three; media is lazy-loaded; external interaction statistics use batched queries; feed indexes support chronological queries |
 | Responsiveness | Mobile-friendly UI | Tailwind responsive grid layouts |
-| Reliability | Stable API behavior | Fallback posts if Reddit fails; Prisma verification script exists |
+| Reliability | Stable API behavior | Fallback posts if Reddit/YouTube fails; obsolete feed requests are aborted; malformed cursors and external sync payloads are rejected; Prisma verification and automated test scripts exist |
 | Usability | Easy-to-use interface | Modal auth, social feed, cards, clear actions |
 | Deployability | Online hosting | Vercel deployment using the Next.js framework preset |
 | Maintainability | Clear file separation | Social components, lib utilities, Prisma config, types, and app routes are separated |
@@ -582,7 +600,7 @@ Suggestions are stored in PostgreSQL through the `AiSuggestion` table. Generatio
 ### Endpoint Example
 
 ```bash
-https://www.reddit.com/r/Coffee/hot.json?limit=12
+https://www.reddit.com/r/Coffee/hot.json?limit=4
 ```
 
 ### Request Method
@@ -675,19 +693,31 @@ Fetches cafe, latte art, flower, and bouquet-related videos from the YouTube Dat
 ### Endpoint
 
 ```http
-GET /api/posts
+GET /api/posts?limit=15&cursor=OPTIONAL_CURSOR
 ```
 
 ### Description
-Returns PostgreSQL-backed user-created posts in the social feed format. Public feed requests only return posts with `status = "VISIBLE"` so admin-hidden posts are removed from the user-facing feed without deleting the database record.
+Returns PostgreSQL-backed user-created posts in the social feed format. Public feed requests only return posts with `status = "VISIBLE"` so admin-hidden posts are removed from the user-facing feed without deleting the database record. Results use stable newest-first cursor pagination ordered by `createdAt` and `id`. The default page size is 15 and the maximum accepted page size is 30.
 
 ### Response Shape
 
 ```json
 {
-  "posts": []
+  "posts": [],
+  "nextCursor": "base64url-createdAt-and-id-or-null"
 }
 ```
+
+Each Bloom post contains only its three latest comment bodies in the feed response plus `commentCount`, which preserves the complete count without transferring the complete thread.
+
+### Endpoint
+
+```http
+GET /api/posts/[id]/comments
+```
+
+### Description
+Returns the complete oldest-to-newest comment thread for a visible Bloom post when the user selects **View all comments**. The feed then offers **Show fewer comments** to return to the latest-three preview.
 
 ### Endpoint
 
@@ -837,6 +867,8 @@ POST /api/external-posts/[id]/shares
 ### Description
 These routes persist user interactions for Reddit and YouTube feed items without copying the full third-party post into the Bloom & Brew post table. The app stores the external source, external post id, title, URL, author, and interaction records in PostgreSQL.
 
+`POST /api/external-posts/sync` accepts at most 30 validated external posts and a maximum 64 KB request body. It rejects malformed JSON, invalid dates, unsupported sources, oversized fields, and excessive requests. Missing external records are inserted in one batch, while likes, shares, comments, viewer likes, and viewer bookmarks are loaded through a fixed group of batch queries.
+
 ---
 
 ## 10.8 Internal Notification API Route
@@ -910,6 +942,7 @@ The admin dashboard currently uses protected server-rendered pages and server ac
 - Post composer
 - News feed
 - Comments
+- Latest comment previews with View all comments and Show fewer comments controls
 - Notifications
 - Sidebar calendar
 - Sidebar calendar with weekly post ideas and upcoming-event details
@@ -1085,8 +1118,10 @@ src/
       useSuggestedFollows.ts
   lib/
     auth.ts
+    external-post-validation.ts
     external-posts.ts
     fallback-posts.ts
+    post-cursor.ts
     prisma.ts
     reddit.ts
     social.ts
@@ -1098,9 +1133,13 @@ src/
 prisma/
   migrations/
   schema.prisma
+  seed-feed-posts.ts
   seed.ts
 scripts/
   verify-prisma.ts
+tests/
+  external-post-validation.test.ts
+  post-cursor.test.ts
 prisma.config.ts
 ```
 
@@ -1124,7 +1163,9 @@ prisma.config.ts
 ```json
 {
   "build": "prisma generate && next build",
-  "start": "next start"
+  "start": "next start",
+  "test": "node --import tsx --test tests/*.test.ts",
+  "db:seed:feed": "tsx prisma/seed-feed-posts.ts"
 }
 ```
 
@@ -1137,7 +1178,7 @@ Vercel uses the Next.js framework preset for production runtime. The `start` scr
 | Concern | Current Handling |
 |---|---|
 | Reddit API failure | Fallback dataset |
-| API abuse | Reddit fetch cache/revalidation |
+| API abuse | Reddit fetch cache/revalidation; external sync has request-count, body-size, field-length, source, and date validation plus an instance-local rate limit |
 | Sensitive keys | `DATABASE_URL` and `YOUTUBE_API_KEY` are stored in `.env` locally and must be configured as Vercel environment variables |
 | XSS | React escapes rendered text; user content is rendered as text |
 | Authentication | Database-backed custom auth with HTTP-only session cookie |
@@ -1148,8 +1189,8 @@ Vercel uses the Next.js framework preset for production runtime. The `start` scr
 For a real deployed social network, strengthen the current custom auth with:
 - email verification
 - password reset
-- rate limiting
-- OAuth option
+- distributed rate limiting across authentication and mutation routes
+- additional OAuth providers or migration to a maintained authentication framework
 - CSRF review for state-changing routes
 - stricter server-side authorization checks
 
@@ -1204,7 +1245,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - `POST /api/external-posts/[id]/likes`
 - `POST /api/external-posts/[id]/bookmarks`
 - `POST /api/external-posts/[id]/shares`
-- Prisma schema, migrations, generated client, seed script, and verification script
+- Prisma schema, deployed feed-index migration, generated client, general seed script, feed-scale seed script, and verification script
 - Media URL posting, YouTube URL embedding, and CSS filter selection
 - Location tagging in the composer
 - Database-backed in-app notifications
@@ -1214,6 +1255,17 @@ For a real deployed social network, strengthen the current custom auth with:
 - Notification permission moved into the navbar notification menu
 - Explicit profile editor with Save and Cancel controls
 - Age-sorted combined feed across Bloom, Reddit, and YouTube posts
+- Stable `createdAt` + `id` cursor pagination with 15 Bloom posts per page and a Load more action
+- Composite PostgreSQL feed indexes for visible chronological and author-filtered pagination queries
+- Latest-three Bloom comment previews with total counts and on-demand View all/Show fewer controls
+- `GET /api/posts/[id]/comments` for on-demand complete visible Bloom comment threads
+- Bounded initial feed source volume of up to 12 Reddit posts and 8 YouTube posts
+- Lazy loading for feed/profile images and YouTube iframes
+- Abortable Bloom, Reddit, and YouTube refresh requests, including Reddit refresh support
+- Batched external-post insertion and grouped interaction-statistic queries
+- External sync validation, 30-post and 64 KB limits, and instance-local request throttling
+- Feed-scale test seeder with 35 Bloom posts, varied comments, likes, shares, media, filters, authors, and timestamps
+- Automated cursor and external-payload validation tests through `npm test`
 - Sidebar calendar card
 - Database-backed calendar event model and public calendar API
 - Public calendar event modal with post idea reuse
@@ -1251,6 +1303,14 @@ For a real deployed social network, strengthen the current custom auth with:
 - Feed tabs, feed notices, empty state, source status strip, skeletons, and account/delete modals extracted into presentational components
 - Public feed action labels keep consistent Like, Share, Save, and Comment wording while active state is shown visually
 
+## Current Verification
+- `npm run lint` passes with no lint findings
+- `npm test` passes all cursor and external-payload validation tests
+- `npm run build` completes the optimized Next.js production build and TypeScript validation
+- Browser smoke testing confirms a five-comment Bloom thread expands from three visible comments to all five and collapses back to three
+- `npm run db:seed:feed` created and database verification confirmed 35 feed-scale Bloom test posts
+- Prisma migration `20260621090000_add_feed_pagination_indexes` is deployed and the configured database reports an up-to-date schema
+
 ## Partially Implemented
 - Feed persistence: user-created posts persist in PostgreSQL, while Reddit/YouTube content remains externally sourced and is mirrored only for interaction persistence
 - YouTube persistence: YouTube video posts are fetched from the API and embedded in the feed, while user interactions are saved locally in PostgreSQL
@@ -1267,6 +1327,8 @@ For a real deployed social network, strengthen the current custom auth with:
 - Trend management dashboard: trend signals can be viewed and feed AI Suggestions, but approval/featured trend workflows are not complete
 - Integration management dashboard: integration status view exists, but richer health/fallback diagnostics are not complete
 - Share analytics: share counters persist, but selected platform/method is not yet persisted for analytics
+- External metadata refresh: batched sync inserts missing external posts efficiently, but existing mirrored titles/images are not currently refreshed during sync
+- Sync throttling: request throttling is process-local and should use Redis or platform-level controls for multi-instance production
 
 ## Not Yet Implemented
 - Admin-only management API mutation routes
@@ -1283,6 +1345,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Real video/audio streaming
 - Live-room UI and lifecycle
 - Comprehensive server-side authorization rules for every mutation route
+- Distributed production rate limiting
 
 ---
 
@@ -1299,6 +1362,9 @@ For a real deployed social network, strengthen the current custom auth with:
 - Admin access is controlled by an `ADMIN_EMAILS` allowlist instead of a database-backed role field
 - Admin management pages include search, pagination, server-action authorization checks, user status/edit controls, post moderation controls, and disabled-user enforcement
 - Trend keywords are displayed and feed the provider-aware AI Suggestions workflow, but there is no featured-trend approval workflow yet
+- Bloom feed responses transfer only the latest three comments; complete threads are available on demand, but very large threads do not yet have their own comment cursor pagination
+- Existing mirrored Reddit/YouTube metadata is not refreshed by the optimized missing-record batch insert
+- External sync rate limiting is instance-local and resets with the server process
 
 ---
 
@@ -1310,6 +1376,9 @@ For a real deployed social network, strengthen the current custom auth with:
 - Add richer analytics for AI suggestion outcomes and calendar conversion rates
 - Add richer integration health cards for Reddit and YouTube
 - Add share analytics by platform/method
+- Add cursor pagination inside very large expanded comment threads
+- Add bulk refresh/upsert behavior for changed Reddit/YouTube titles and images
+- Replace instance-local external-sync throttling with Redis or platform-level distributed rate limiting
 - Expand OAuth support beyond Google or migrate to Auth.js/Supabase Auth for a production-grade provider layer
 - Optional Reddit OAuth/API credentials if public Reddit JSON is blocked in production
 - Add followed-first ranking to the For You feed
@@ -1339,6 +1408,16 @@ The public feed UX hardening milestone is now implemented on the current feature
 - Show a floating new-post button below the navbar offset so users can refresh the feed without automatic feed jumps
 - Use compact icon-and-count actions, responsive comment controls, and expandable long-form post content
 - Show skeleton cards during feed refreshes and contextual empty states after Following loads
+- Load Bloom posts in stable 15-post cursor pages with a Load more action
+- Bound the server-rendered external feed to 12 Reddit and 8 YouTube items
+- Load only the latest three Bloom comment bodies in feed responses while retaining total counts
+- Fetch complete Bloom comment threads only when View all comments is selected, with Show fewer restoring the compact view
+- Lazy-load feed/profile images and YouTube embeds
+- Refresh Reddit as well as Bloom and YouTube, cancelling obsolete requests during feed changes
+- Synchronize external posts and engagement statistics through bounded batch operations
+- Protect external sync with payload validation, size/count limits, and instance-local throttling
+- Deploy composite feed pagination indexes to PostgreSQL
+- Add automated cursor/payload tests and an idempotent 35-post feed-scale seed command
 
 ## Priority 1: Admin Management Hardening
 - Move admin mutations into dedicated API/server-action helpers where useful
@@ -1364,4 +1443,4 @@ The public feed UX hardening milestone is now implemented on the current feature
 
 Bloom & Brew Social is now a deployable social media prototype that combines Reddit-powered community content with core social media interactions. The application demonstrates the required social media platform fundamentals through a frontend demo experience: account creation, profile personalization, feed interactions, content sharing, notifications, following, media editing, calendar-based post ideas, and geolocation. Chat/calling and streaming are documented backlog items for future implementation.
 
-The current version is suitable for academic demonstration and deployment. For the next assignment, the most important expansion is the Admin Insights Dashboard because it connects emerging technologies, richer data, recommendation services, and management functionality in one coherent enhancement. For production use, the remaining local/demo features should be replaced with persistent database storage, stronger account security, role-based authorization, and real-time infrastructure.
+The current version is suitable for academic demonstration and deployment. The Admin Insights Dashboard, provider-aware AI Suggestions, calendar workflow, moderation controls, and integration views are implemented alongside the optimized public feed. The next most important work is production hardening: database-backed admin roles, dedicated management boundaries, distributed rate limiting, richer integration diagnostics, large-thread comment pagination, stronger account security, and real-time infrastructure for future communication features.

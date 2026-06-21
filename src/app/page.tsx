@@ -10,9 +10,9 @@ export default async function Home() {
 
   return (
     <SocialApp
-      redditPosts={redditFeed.posts}
+      redditPosts={redditFeed.posts.slice(0, 12)}
       source={redditFeed.source}
-      youtubePosts={youtubeFeed.posts}
+      youtubePosts={youtubeFeed.posts.slice(0, 8)}
       youtubeSource={youtubeFeed.source}
     />
   );

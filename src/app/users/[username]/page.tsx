@@ -145,6 +145,7 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
                 <div className="px-5 pb-4">
                   <div className="overflow-hidden rounded-[6px] border border-[#eadfd4] bg-[#211f1d]">
                     <iframe
+                      loading="lazy"
                       className="aspect-video w-full"
                       src={`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=0&rel=0`}
                       title={post.content}
@@ -168,6 +169,8 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
                   <div className="overflow-hidden rounded-[6px] border border-[#eadfd4] bg-[#fff8f2]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
+                      loading="lazy"
+                      decoding="async"
                       src={post.imageUrl}
                       alt=""
                       className={`max-h-[520px] w-full object-cover ${filterClasses[post.filter]}`}
