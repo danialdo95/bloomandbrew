@@ -12,6 +12,8 @@ export function PostCard({ post, compact = false }: PostCardProps) {
         {post.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
+            loading="lazy"
+            decoding="async"
             src={post.imageUrl}
             alt=""
             className={`${compact ? "h-52" : "h-64"} w-full object-cover transition duration-500 group-hover:scale-[1.03]`}

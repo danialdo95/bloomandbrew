@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { seedSocialPosts } from "@/lib/social";
+import type { RedditPost } from "@/types/reddit";
 import type { SocialPost } from "@/types/social";
 
 export type FeedMode = "for-you" | "following";
@@ -29,7 +31,6 @@ type UseFeedPostsOptions = {
   followRefreshKey: number;
   initialExternalPosts: SocialPost[];
   isAuthenticated: boolean;
-  profileUsername: string;
   redditSource: "reddit" | "fallback";
   storageReady: boolean;
   youtubeSource: "youtube" | "fallback";
@@ -42,14 +43,16 @@ export function useFeedPosts({
   followRefreshKey,
   initialExternalPosts,
   isAuthenticated,
-  profileUsername,
   redditSource,
   storageReady,
   youtubeSource,
 }: UseFeedPostsOptions) {
   const [posts, setPosts] = useState<SocialPost[]>(() => initialExternalPosts);
   const [isFeedLoading, setIsFeedLoading] = useState(true);
-  const [isExternalFeedLoading, setIsExternalFeedLoading] = useState(false);
+  const [isRedditLoading, setIsRedditLoading] = useState(false);
+  const [isYouTubeLoading, setIsYouTubeLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [feedSources, setFeedSources] = useState<FeedSourceState>({
     bloom: "loading",
     reddit: redditSource === "reddit" ? "ready" : "fallback",
@@ -70,7 +73,9 @@ export function useFeedPosts({
         : "",
     [feedMode, posts],
   );
-  const isFeedBusy = isFeedLoading || isExternalFeedLoading;
+  const isFeedBusy = isFeedLoading || (
+    feedMode === "for-you" && (isRedditLoading || isYouTubeLoading)
+  );
 
   useEffect(() => {
     postsRef.current = posts;
@@ -78,6 +83,7 @@ export function useFeedPosts({
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
 
     async function loadDatabasePosts() {
       if (!storageReady) {
@@ -96,16 +102,21 @@ export function useFeedPosts({
 
       try {
         const params = new URLSearchParams({
-          viewer: profileUsername,
           feed: feedMode === "following" ? "following" : "for-you",
+          limit: "15",
         });
-        const response = await fetch(`/api/posts?${params.toString()}`);
+        const response = await fetch(`/api/posts?${params.toString()}`, {
+          signal: controller.signal,
+        });
 
         if (!response.ok) {
           throw new Error(`Post fetch failed with status ${response.status}`);
         }
 
-        const data = (await response.json()) as { posts: SocialPost[] };
+        const data = (await response.json()) as {
+          posts: SocialPost[];
+          nextCursor?: string | null;
+        };
 
         if (!active) {
           return;
@@ -113,6 +124,7 @@ export function useFeedPosts({
 
         setLatestBloomPostAt(getLatestPostDate(data.posts) ?? new Date().toISOString());
         setNewPostCount(0);
+        setNextCursor(data.nextCursor ?? null);
 
         setPosts((current) => {
           if (feedMode === "following") {
@@ -132,6 +144,7 @@ export function useFeedPosts({
         });
         setFeedSources((current) => ({ ...current, bloom: "ready" }));
       } catch (error) {
+        if (controller.signal.aborted) return;
         console.error(error);
         setFeedSources((current) => ({ ...current, bloom: "error" }));
       } finally {
@@ -145,6 +158,7 @@ export function useFeedPosts({
 
     return () => {
       active = false;
+      controller.abort();
     };
   }, [
     feedMode,
@@ -152,12 +166,66 @@ export function useFeedPosts({
     followRefreshKey,
     initialExternalPosts,
     isAuthenticated,
-    profileUsername,
     storageReady,
   ]);
 
   useEffect(() => {
+    if (feedMode !== "for-you" || feedRefreshKey === 0) {
+      return;
+    }
+
     let active = true;
+    const controller = new AbortController();
+
+    async function loadRedditPosts() {
+      setIsRedditLoading(true);
+      setFeedSources((current) => ({ ...current, reddit: "loading" }));
+
+      try {
+        const response = await fetch("/api/reddit", { signal: controller.signal });
+        const data = (await response.json()) as {
+          posts?: RedditPost[];
+          source?: "reddit" | "fallback";
+        };
+
+        if (!response.ok || !data.posts?.length) throw new Error("Reddit feed unavailable.");
+        if (!active) return;
+
+        const redditPosts = seedSocialPosts(data.posts.slice(0, 12)).map((post) => ({
+          ...post,
+          sourceLabel: data.source === "fallback" ? "Curated Reddit inspiration" : undefined,
+        }));
+
+        setPosts((current) => {
+          const databasePosts = current.filter(isDatabasePost);
+          const otherPosts = current.filter(
+            (post) => !isDatabasePost(post) && post.source !== "reddit",
+          );
+          return sortPostsByAge([...databasePosts, ...redditPosts, ...otherPosts]);
+        });
+        setFeedSources((current) => ({
+          ...current,
+          reddit: data.source === "fallback" ? "fallback" : "ready",
+        }));
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        console.error(error);
+        if (active) setFeedSources((current) => ({ ...current, reddit: "error" }));
+      } finally {
+        if (active) setIsRedditLoading(false);
+      }
+    }
+
+    void loadRedditPosts();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [feedMode, feedRefreshKey]);
+
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
 
     async function loadYouTubePosts() {
       if (feedMode !== "for-you") {
@@ -173,22 +241,20 @@ export function useFeedPosts({
         return;
       }
 
-      setIsExternalFeedLoading(true);
+      setIsYouTubeLoading(true);
       setFeedSources((current) => ({ ...current, youtube: "loading" }));
 
       try {
-        const response = await fetch("/api/youtube");
+        const response = await fetch("/api/youtube", { signal: controller.signal });
         const data = (await response.json()) as {
           posts?: SocialPost[];
           source?: "youtube" | "fallback";
         };
 
-        if (!active || !data.posts?.length) {
-          setFeedSources((current) => ({ ...current, youtube: "error" }));
-          return;
-        }
+        if (!response.ok || !data.posts?.length) throw new Error("YouTube feed unavailable.");
+        if (!active) return;
 
-        const youtubePosts = data.posts.map((post) => ({
+        const youtubePosts = data.posts.slice(0, 8).map((post) => ({
           ...post,
           sourceLabel:
             data.source === "fallback" ? "Curated YouTube inspiration" : post.sourceLabel,
@@ -211,11 +277,12 @@ export function useFeedPosts({
           youtube: data.source === "fallback" ? "fallback" : "ready",
         }));
       } catch (error) {
+        if (controller.signal.aborted) return;
         console.error(error);
-        setFeedSources((current) => ({ ...current, youtube: "error" }));
+        if (active) setFeedSources((current) => ({ ...current, youtube: "error" }));
       } finally {
         if (active) {
-          setIsExternalFeedLoading(false);
+          setIsYouTubeLoading(false);
         }
       }
     }
@@ -224,8 +291,43 @@ export function useFeedPosts({
 
     return () => {
       active = false;
+      controller.abort();
     };
   }, [feedMode, feedRefreshKey, youtubeSource]);
+
+  async function loadMorePosts() {
+    if (!nextCursor || isLoadingMore) return;
+
+    setIsLoadingMore(true);
+    try {
+      const params = new URLSearchParams({
+        feed: feedMode === "following" ? "following" : "for-you",
+        limit: "15",
+        cursor: nextCursor,
+      });
+      const response = await fetch(`/api/posts?${params.toString()}`);
+      const data = (await response.json()) as {
+        posts?: SocialPost[];
+        nextCursor?: string | null;
+        error?: string;
+      };
+
+      if (!response.ok || !data.posts) throw new Error(data.error ?? "More posts could not be loaded.");
+
+      setPosts((current) => {
+        const incomingIds = new Set(data.posts?.map((post) => post.id));
+        return sortPostsByAge([
+          ...current.filter((post) => !incomingIds.has(post.id)),
+          ...data.posts!,
+        ]);
+      });
+      setNextCursor(data.nextCursor ?? null);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -279,12 +381,10 @@ export function useFeedPosts({
             };
           }),
         );
+        setFeedSources((current) => ({ ...current, interactions: "ready" }));
       } catch (error) {
         console.error(error);
-      } finally {
-        if (active) {
-          setFeedSources((current) => ({ ...current, interactions: "ready" }));
-        }
+        if (active) setFeedSources((current) => ({ ...current, interactions: "error" }));
       }
     }
 
@@ -345,7 +445,10 @@ export function useFeedPosts({
 
   return {
     feedSources,
+    hasMorePosts: Boolean(nextCursor),
     isFeedBusy,
+    isLoadingMore,
+    loadMorePosts,
     newPostCount,
     posts,
     resetNewPostCount: () => setNewPostCount(0),

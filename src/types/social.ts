@@ -34,6 +34,7 @@ export type SocialPost = {
   persistedLikeCount?: number;
   shares: number;
   externalCommentCount?: number;
+  commentCount?: number;
   comments: SocialComment[];
   liked: boolean;
   bookmarked: boolean;

@@ -136,7 +136,10 @@ export function SocialApp({
 
   const {
     feedSources,
+    hasMorePosts,
     isFeedBusy,
+    isLoadingMore,
+    loadMorePosts,
     newPostCount,
     posts,
     resetNewPostCount,
@@ -149,7 +152,6 @@ export function SocialApp({
     followRefreshKey,
     initialExternalPosts,
     isAuthenticated,
-    profileUsername: profile.username,
     redditSource: source,
     storageReady,
     youtubeSource,
@@ -317,8 +319,9 @@ export function SocialApp({
           {showFeedSkeletons ? <FeedSkeletonList /> : null}
 
           {!showFeedSkeletons && posts.length ? (
-            posts.map((post) => (
-              <FeedPost
+            <>
+              {posts.map((post) => (
+                <FeedPost
                 key={post.id}
                 post={post}
                 commentDraft={commentDrafts[post.id] ?? ""}
@@ -338,8 +341,19 @@ export function SocialApp({
                 onAddComment={(postId) => {
                   void addComment(postId);
                 }}
-              />
-            ))
+                />
+              ))}
+              {hasMorePosts ? (
+                <button
+                  type="button"
+                  onClick={() => void loadMorePosts()}
+                  disabled={isLoadingMore}
+                  className="w-full rounded-[6px] border border-[#eadfd4] bg-white px-5 py-3 text-sm font-black text-[#c45572] shadow-[0_8px_24px_rgba(64,45,35,0.06)] transition hover:bg-[#fff8f2] disabled:cursor-wait disabled:opacity-60"
+                >
+                  {isLoadingMore ? "Loading more posts..." : "Load more posts"}
+                </button>
+              ) : null}
+            </>
           ) : !showFeedSkeletons ? (
             <FeedEmptyState
               feedMode={feedMode}

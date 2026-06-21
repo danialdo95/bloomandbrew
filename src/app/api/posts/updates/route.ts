@@ -22,20 +22,7 @@ export async function GET(request: Request) {
       },
     },
   });
-  const latestPost = await prisma.post.findFirst({
-    where: {
-      status: "VISIBLE",
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-    select: {
-      createdAt: true,
-    },
-  });
-
   return NextResponse.json({
     count,
-    latestCreatedAt: latestPost?.createdAt.toISOString() ?? null,
   });
 }

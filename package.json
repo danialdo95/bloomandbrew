@@ -10,7 +10,9 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
+    "test": "node --import tsx --test tests/*.test.ts",
     "db:generate": "prisma generate",
+    "db:seed:feed": "tsx prisma/seed-feed-posts.ts",
     "db:studio": "prisma studio",
     "db:verify": "tsx scripts/verify-prisma.ts"
   },

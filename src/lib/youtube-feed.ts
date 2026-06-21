@@ -152,7 +152,7 @@ export async function getYouTubeFeed(
     part: "snippet",
     q: query,
     type: "video",
-    maxResults: "20",
+    maxResults: "8",
     safeSearch: "moderate",
     key: apiKey,
   });

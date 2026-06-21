@@ -433,6 +433,7 @@ export function usePostActions({
               ? {
                   ...post,
                   comments: [...post.comments, savedComment],
+                  commentCount: (post.commentCount ?? post.comments.length) + 1,
                 }
               : post,
           ),
