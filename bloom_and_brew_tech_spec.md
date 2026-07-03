@@ -4,6 +4,8 @@
 
 **Current implementation update:** 21 June 2026 — feed performance hardening, cursor pagination, batched external interaction synchronization, expandable Bloom comment threads, and feed-scale test data are implemented on `codex/feed-performance-hardening`.
 
+**Current implementation update:** 3 July 2026 — the AI suggestion review workflow is now an enforced `PENDING → APPROVED → ADDED_TO_CALENDAR` funnel. A suggestion must be approved before it can be added to the calendar, the add-to-calendar action is blocked and its button disabled until approval, and the `ADDED_TO_CALENDAR` status now uses a distinct badge colour on `codex/ai-suggestion-approval-gate`.
+
 ---
 
 # 1. Project Overview
@@ -503,7 +505,7 @@ The dashboard will help platform managers monitor users, posts, trends, integrat
 | Posts | View posts and engagement metrics implemented; search, status filtering, pagination, hide/restore, delete confirmation, and delete moderation controls implemented |
 | Calendar | Database-backed calendar events implemented; create/edit modals, delete confirmation, search, status/type filtering, pagination, visibility controls, quick status actions, multiple public weekly events, sync error state, and public post idea reuse implemented |
 | Trends | View trend signals implemented; featured trend and approval workflows remain backlog |
-| AI Suggestions | Provider-aware suggestion workflow implemented with DeepSeek support, local trend-engine fallback, persisted suggestions, approve/delete controls, and add-to-calendar reuse |
+| AI Suggestions | Provider-aware suggestion workflow implemented with DeepSeek support, local trend-engine fallback, persisted suggestions, approve/delete controls, and approval-gated add-to-calendar reuse (a suggestion must be `APPROVED` before it can be scheduled) |
 | Integrations | Integration status view implemented; richer API health/fallback diagnostics remain backlog |
 
 ## Emerging Technology Value
@@ -524,8 +526,8 @@ The app already analyzes trending keywords through `src/lib/trends.ts`. The next
 - Suggested content categories such as coffee, bouquet, plants, events, and cafe ambience
 - Provider-aware generation using DeepSeek when `DEEPSEEK_API_KEY` is configured
 - Local trend-engine fallback when no external API key is configured
-- Persisted admin review workflow with `PENDING`, `APPROVED`, and `ADDED_TO_CALENDAR` statuses, plus permanent suggestion deletion with confirmation
-- Add-to-calendar action that creates a draft public calendar post idea
+- Persisted admin review workflow with an enforced `PENDING → APPROVED → ADDED_TO_CALENDAR` funnel, colour-coded status badges (amber pending, green approved, blue added-to-calendar), and permanent suggestion deletion with confirmation
+- Approval-gated add-to-calendar action that requires an `APPROVED` suggestion and creates a draft public calendar post idea; the action is blocked server-side and the button is disabled with an explanatory tooltip until the suggestion is approved
 
 ## Current Scope
 Suggestions are stored in PostgreSQL through the `AiSuggestion` table. Generation uses DeepSeek when an API key is available and falls back to deterministic local trend templates when no key is configured, so the feature remains usable during local development, deployment, and demos.
@@ -568,7 +570,7 @@ Suggestions are stored in PostgreSQL through the `AiSuggestion` table. Generatio
 | FR-13 | System shall be accessible online | Implemented through Vercel deployment |
 | FR-14 | System shall support responsive design | Implemented with Tailwind responsive layouts |
 | FR-15 | Admins shall manage users, posts, trends, and integrations | Partially implemented; user edit/status controls and post moderation actions exist, while trend/integration workflows remain limited |
-| FR-16 | System shall generate content suggestions from trend data | Implemented with provider-aware AI Suggestions, local fallback generation, persisted review statuses, and calendar reuse |
+| FR-16 | System shall generate content suggestions from trend data | Implemented with provider-aware AI Suggestions, local fallback generation, persisted review statuses, an enforced approval funnel, and approval-gated calendar reuse |
 | FR-17 | Admins shall monitor external API and fallback status | Partially implemented through the Integration Management admin view |
 | FR-18 | Admins shall moderate or remove inappropriate Bloom posts | Implemented for Bloom posts through admin hide/restore and delete controls |
 | FR-19 | System shall load Bloom feed posts incrementally | Implemented with stable cursor pagination and a Load more action |
@@ -1288,6 +1290,7 @@ For a real deployed social network, strengthen the current custom auth with:
 - Admin user search with paginated results
 - Admin post search and `VISIBLE`/`HIDDEN` status filtering with paginated results
 - Admin calendar create/edit modals, delete confirmation, quick status actions, search, status/type filtering, visibility controls, and paginated results
+- Enforced AI suggestion approval funnel: add-to-calendar requires an `APPROVED` suggestion (blocked server-side, button disabled with tooltip until approved), with a distinct `ADDED_TO_CALENDAR` status badge colour
 - Admin action feedback for user edits, status changes, and post moderation actions
 - Delete confirmation for destructive admin post deletion
 - Admin mutation-level authorization checks for user edit/status and post moderation server actions

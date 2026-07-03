@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AdminConfirmSubmitButton } from "@/app/admin/_components/AdminConfirmSubmitButton";
 import { AdminPageHeader } from "@/app/admin/_components/AdminPageHeader";
 import { AdminPagination } from "@/app/admin/_components/AdminPagination";
+import { AdminSubmitButton } from "@/app/admin/_components/AdminSubmitButton";
 import {
   formatAdminDate,
   getAdminAiSuggestions,
@@ -287,12 +288,12 @@ export default async function AdminAiSuggestionsPage({
 
         <form action={generateSuggestions} className="mt-4">
           <input type="hidden" name="returnTo" value={returnTo} />
-          <button
-            type="submit"
-            className="rounded-[6px] bg-[#211f1d] px-4 py-2 text-sm font-black text-white transition hover:bg-[#c45572]"
+          <AdminSubmitButton
+            pendingLabel="Generating…"
+            className="rounded-[6px] bg-[#211f1d] px-4 py-2 text-sm font-black text-white transition hover:bg-[#c45572] disabled:cursor-not-allowed disabled:opacity-60"
           >
             Generate post ideas
-          </button>
+          </AdminSubmitButton>
         </form>
       </section>
 
@@ -347,9 +348,9 @@ export default async function AdminAiSuggestionsPage({
                   <form action={addSuggestionToCalendar}>
                     <input type="hidden" name="suggestionId" value={suggestion.id} />
                     <input type="hidden" name="returnTo" value={returnTo} />
-                    <button
-                      type="submit"
+                    <AdminSubmitButton
                       disabled={suggestion.status !== "APPROVED"}
+                      pendingLabel="Adding…"
                       title={
                         suggestion.status === "ADDED_TO_CALENDAR"
                           ? "Already added to the calendar"
@@ -360,7 +361,7 @@ export default async function AdminAiSuggestionsPage({
                       className="rounded-[6px] border border-[#eadfd4] bg-white px-3 py-2 text-xs font-black text-[#211f1d] transition hover:border-[#c45572] hover:text-[#c45572] disabled:cursor-not-allowed disabled:opacity-45"
                     >
                       Add to calendar
-                    </button>
+                    </AdminSubmitButton>
                   </form>
                   <form action={deleteSuggestion}>
                     <input type="hidden" name="suggestionId" value={suggestion.id} />
@@ -421,13 +422,13 @@ function SuggestionStatusForm({
       <input type="hidden" name="suggestionId" value={suggestionId} />
       <input type="hidden" name="status" value={status} />
       <input type="hidden" name="returnTo" value={returnTo} />
-      <button
-        type="submit"
+      <AdminSubmitButton
         disabled={disabled}
+        pendingLabel="Approving…"
         className="rounded-[6px] border border-[#eadfd4] bg-white px-3 py-2 text-xs font-black text-[#211f1d] transition hover:border-[#c45572] hover:text-[#c45572] disabled:cursor-not-allowed disabled:opacity-45"
       >
         {children}
-      </button>
+      </AdminSubmitButton>
     </form>
   );
 }

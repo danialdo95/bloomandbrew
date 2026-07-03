@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AdminConfirmSubmitButton } from "@/app/admin/_components/AdminConfirmSubmitButton";
 import { AdminPageHeader } from "@/app/admin/_components/AdminPageHeader";
 import { AdminPagination } from "@/app/admin/_components/AdminPagination";
+import { AdminSubmitButton } from "@/app/admin/_components/AdminSubmitButton";
 import {
   formatAdminDate,
   getAdminPosts,
@@ -252,16 +253,16 @@ export default async function AdminPostsPage({ searchParams }: AdminPostsPagePro
                       value={post.status === "VISIBLE" ? "HIDDEN" : "VISIBLE"}
                     />
                     <input type="hidden" name="returnTo" value={returnTo} />
-                    <button
-                      type="submit"
+                    <AdminSubmitButton
+                      pendingLabel={post.status === "VISIBLE" ? "Hiding…" : "Restoring…"}
                       className={
                         post.status === "VISIBLE"
-                          ? "rounded-[6px] border border-yellow-300 bg-yellow-50 px-3 py-2 text-xs font-black text-yellow-800 transition hover:border-yellow-500"
-                          : "rounded-[6px] border border-green-200 bg-green-50 px-3 py-2 text-xs font-black text-green-700 transition hover:border-green-400"
+                          ? "rounded-[6px] border border-yellow-300 bg-yellow-50 px-3 py-2 text-xs font-black text-yellow-800 transition hover:border-yellow-500 disabled:cursor-not-allowed disabled:opacity-60"
+                          : "rounded-[6px] border border-green-200 bg-green-50 px-3 py-2 text-xs font-black text-green-700 transition hover:border-green-400 disabled:cursor-not-allowed disabled:opacity-60"
                       }
                     >
                       {post.status === "VISIBLE" ? "Hide" : "Restore"}
-                    </button>
+                    </AdminSubmitButton>
                   </form>
 
                   <form action={deletePost}>
