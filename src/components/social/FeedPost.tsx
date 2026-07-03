@@ -702,10 +702,10 @@ function getShareUrl(post: SocialPost) {
   }
 
   if (typeof window === "undefined") {
-    return `/users/${post.username}`;
+    return `/posts/${post.id}`;
   }
 
-  return `${window.location.origin}/users/${post.username}#${post.id}`;
+  return `${window.location.origin}/posts/${post.id}`;
 }
 
 function getPostSourceBadge(post: SocialPost) {

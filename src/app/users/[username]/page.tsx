@@ -116,7 +116,8 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
             return (
               <article
                 key={post.id}
-                className="rounded-[6px] border border-[#eadfd4] bg-white shadow-[0_8px_24px_rgba(64,45,35,0.06)]"
+                id={post.id}
+                className="scroll-mt-24 rounded-[6px] border border-[#eadfd4] bg-white shadow-[0_8px_24px_rgba(64,45,35,0.06)]"
               >
               <div className="flex items-start gap-3 p-5">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7c6cf] text-sm font-black">
