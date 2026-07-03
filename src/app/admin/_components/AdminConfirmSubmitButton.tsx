@@ -1,7 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import type { ReactNode } from "react";
+
+import { AdminSpinner } from "@/app/admin/_components/AdminSubmitButton";
 
 type AdminConfirmSubmitButtonProps = {
   children: ReactNode;
@@ -24,11 +27,14 @@ export function AdminConfirmSubmitButton({
 }: AdminConfirmSubmitButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const { pending } = useFormStatus();
 
   return (
     <>
       <button
         type="submit"
+        disabled={pending}
+        aria-busy={pending}
         className={className}
         onClick={(event) => {
           event.preventDefault();
@@ -36,7 +42,10 @@ export function AdminConfirmSubmitButton({
           setIsOpen(true);
         }}
       >
-        {children}
+        <span className="inline-flex items-center justify-center gap-2">
+          {pending ? <AdminSpinner /> : null}
+          {children}
+        </span>
       </button>
 
       {isOpen ? (

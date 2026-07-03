@@ -2,6 +2,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 
+import { AdminSubmitButton } from "@/app/admin/_components/AdminSubmitButton";
 import { getAdminUserById } from "@/app/admin/_lib/admin-data";
 import { getCurrentUser, isAdminUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -202,6 +203,21 @@ export default async function EditUserPage({
               className="h-11 rounded-[6px] border border-[#eadfd4] px-4 text-sm font-bold outline-none transition focus:border-[#c45572]"
             />
           </label>
+
+          <div className="mt-2 flex flex-wrap gap-3">
+            <AdminSubmitButton
+              pendingLabel="Saving…"
+              className="rounded-[6px] bg-[#211f1d] px-5 py-2 text-sm font-black text-white transition hover:bg-[#c45572] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Save changes
+            </AdminSubmitButton>
+            <Link
+              href="/admin/users"
+              className="rounded-[6px] border border-[#eadfd4] px-5 py-2 text-sm font-black text-[#211f1d] transition hover:border-[#c45572] hover:text-[#c45572]"
+            >
+              Cancel
+            </Link>
+          </div>
         </form>
 
         <div className="mt-5 rounded-[6px] border border-[#eadfd4] bg-[#fffaf6] p-4">
@@ -224,43 +240,27 @@ export default async function EditUserPage({
             <form action={updateUserStatus}>
               <input type="hidden" name="userId" value={userId} />
               <input type="hidden" name="status" value="DISABLED" />
-              <button
-                type="submit"
+              <AdminSubmitButton
                 disabled={user.status === "DISABLED"}
+                pendingLabel="Disabling…"
                 className="rounded-[6px] border border-yellow-300 bg-yellow-50 px-4 py-2 text-sm font-black text-yellow-800 transition hover:border-yellow-500 disabled:cursor-not-allowed disabled:opacity-45"
               >
                 Disable user
-              </button>
+              </AdminSubmitButton>
             </form>
 
             <form action={updateUserStatus}>
               <input type="hidden" name="userId" value={userId} />
               <input type="hidden" name="status" value="ACTIVE" />
-              <button
-                type="submit"
+              <AdminSubmitButton
                 disabled={user.status === "ACTIVE"}
+                pendingLabel="Reactivating…"
                 className="rounded-[6px] border border-green-200 bg-green-50 px-4 py-2 text-sm font-black text-green-700 transition hover:border-green-400 disabled:cursor-not-allowed disabled:opacity-45"
               >
                 Reactivate user
-              </button>
+              </AdminSubmitButton>
             </form>
           </div>
-        </div>
-
-        <div className="mt-6 flex flex-wrap gap-3">
-          <button
-            form="edit-user-form"
-            type="submit"
-            className="rounded-[6px] bg-[#211f1d] px-5 py-2 text-sm font-black text-white transition hover:bg-[#c45572]"
-          >
-            Save changes
-          </button>
-          <Link
-            href="/admin/users"
-            className="rounded-[6px] border border-[#eadfd4] px-5 py-2 text-sm font-black text-[#211f1d] transition hover:border-[#c45572] hover:text-[#c45572]"
-          >
-            Cancel
-          </Link>
         </div>
       </section>
     </main>

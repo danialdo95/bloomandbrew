@@ -5,6 +5,7 @@ import { AdminCalendarEventModalButton } from "@/app/admin/_components/AdminCale
 import { AdminConfirmSubmitButton } from "@/app/admin/_components/AdminConfirmSubmitButton";
 import { AdminPageHeader } from "@/app/admin/_components/AdminPageHeader";
 import { AdminPagination } from "@/app/admin/_components/AdminPagination";
+import { AdminSubmitButton } from "@/app/admin/_components/AdminSubmitButton";
 import {
   formatAdminDate,
   getAdminCalendarEvents,
@@ -523,13 +524,13 @@ function QuickStatusButton({
       <input type="hidden" name="eventId" value={eventId} />
       <input type="hidden" name="returnTo" value={returnTo} />
       <input type="hidden" name="status" value={status} />
-      <button
-        type="submit"
+      <AdminSubmitButton
         disabled={disabled}
+        pendingLabel="Updating…"
         className="rounded-[6px] border border-[#eadfd4] bg-white px-3 py-2 text-xs font-black text-[#211f1d] transition hover:border-[#c45572] hover:text-[#c45572] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-[#eadfd4] disabled:hover:text-[#211f1d]"
       >
         {children}
-      </button>
+      </AdminSubmitButton>
     </form>
   );
 }
