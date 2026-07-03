@@ -71,6 +71,10 @@ function getFeedbackMessage(value?: string) {
     return "No trend signals were available to generate suggestions.";
   }
 
+  if (value === "approvalRequired") {
+    return "Approve this suggestion before adding it to the calendar.";
+  }
+
   return "";
 }
 
@@ -176,6 +180,10 @@ async function addSuggestionToCalendar(formData: FormData) {
     return;
   }
 
+  if (suggestion.status !== "APPROVED") {
+    redirect(withFeedback(returnTo, "approvalRequired"));
+  }
+
   const calendarEvent = await prisma.calendarEvent.create({
     data: {
       title: suggestion.title,
@@ -237,7 +245,7 @@ export default async function AdminAiSuggestionsPage({
 
       {feedback ? (
         <p className={`mt-5 rounded-[6px] border px-4 py-3 text-sm font-black ${
-          params?.updated === "empty"
+          params?.updated === "empty" || params?.updated === "approvalRequired"
             ? "border-yellow-200 bg-yellow-50 text-yellow-800"
             : "border-green-200 bg-green-50 text-green-700"
         }`}
@@ -341,7 +349,14 @@ export default async function AdminAiSuggestionsPage({
                     <input type="hidden" name="returnTo" value={returnTo} />
                     <button
                       type="submit"
-                      disabled={suggestion.status === "ADDED_TO_CALENDAR"}
+                      disabled={suggestion.status !== "APPROVED"}
+                      title={
+                        suggestion.status === "ADDED_TO_CALENDAR"
+                          ? "Already added to the calendar"
+                          : suggestion.status !== "APPROVED"
+                            ? "Approve this suggestion first"
+                            : undefined
+                      }
                       className="rounded-[6px] border border-[#eadfd4] bg-white px-3 py-2 text-xs font-black text-[#211f1d] transition hover:border-[#c45572] hover:text-[#c45572] disabled:cursor-not-allowed disabled:opacity-45"
                     >
                       Add to calendar
@@ -429,7 +444,11 @@ function getStatusBadge(status: string) {
     return "bg-yellow-100 text-yellow-800";
   }
 
-  if (status === "APPROVED" || status === "ADDED_TO_CALENDAR") {
+  if (status === "ADDED_TO_CALENDAR") {
+    return "bg-blue-100 text-blue-700";
+  }
+
+  if (status === "APPROVED") {
     return "bg-green-100 text-green-700";
   }
 
