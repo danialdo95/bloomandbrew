@@ -2,9 +2,9 @@
 ## Technical Specification Document
 ### CSC795 - Social Media Ecosystem Assignment
 
-**Current implementation update:** 21 June 2026 — feed performance hardening, cursor pagination, batched external interaction synchronization, expandable Bloom comment threads, and feed-scale test data are implemented on `codex/feed-performance-hardening`.
+**Current implementation update:** 10 July 2026 — the main branch includes feed performance hardening, cursor pagination, batched external interaction synchronization, expandable Bloom comment threads, feed-scale test data, Google OAuth, database-backed calendar management, and the provider-aware AI suggestion workflow.
 
-**Current implementation update:** 3 July 2026 — the AI suggestion review workflow is now an enforced `PENDING → APPROVED → ADDED_TO_CALENDAR` funnel. A suggestion must be approved before it can be added to the calendar, the add-to-calendar action is blocked and its button disabled until approval, and the `ADDED_TO_CALENDAR` status now uses a distinct badge colour on `codex/ai-suggestion-approval-gate`.
+The AI suggestion review workflow enforces a `PENDING → APPROVED → ADDED_TO_CALENDAR` funnel. Suggestions must be approved before calendar reuse, while permanent deletion remains available through a themed confirmation action.
 
 ---
 
@@ -41,16 +41,16 @@ The application demonstrates:
 - Create a visually engaging BloomThis-inspired interface
 - Deploy the application online using Vercel
 
-## Next Assignment Enhancement Objective
-For the next assignment, the project will be expanded from a social media prototype into an emerging-technology enhanced social platform. The proposed enhancement is an **Admin Insights Dashboard** that uses trend analytics, recommendation logic, and external social media integrations to help users and platform managers understand community behavior and manage the added services.
+## Assignment 3 Enhancement Objective
+Assignment 3 expands the project from its original social feed into an emerging-technology enhanced platform. The implemented enhancement is an **Admin Insights Dashboard** that uses trend analytics, provider-aware recommendation logic, calendar planning, and external social media integrations to help platform managers understand community behavior and manage the added services.
 
 This enhancement directly supports the assignment objective: analyze the impact of new and emerging technologies in the social media ecosystem, then identify opportunities to add value through new services or richer data.
 
-The next implementation phase should focus on:
-- Admin and platform management functionality
-- Trend and content insight management
-- AI-style content suggestion workflows
-- Integration status and external-source management
+The completed enhancement phase includes:
+- Admin user, post, calendar, trend, suggestion, and integration management views
+- Trend and content insight analysis using Reddit and recent Bloom posts
+- Provider-aware AI Suggestions with DeepSeek and a deterministic local fallback
+- Approval-gated reuse of generated suggestions as calendar post ideas
 - Moderation and operational visibility for users, posts, and engagement
 
 ---
@@ -143,7 +143,7 @@ Remaining demo-only state:
 polls ─→ localStorage or React state
 
 Admin insight flow:
-Reddit + YouTube + Bloom posts ─→ trend analysis ─→ admin dashboard
+Reddit + recent Bloom posts ─→ trend analysis ─→ admin dashboard
 Admin dashboard ─→ content suggestions, moderation actions, integration status
 ```
 
@@ -456,7 +456,7 @@ The Community page demonstrates polls and community participation.
 # 6.14 Admin Insights Dashboard
 
 ## Description
-The current feature phase introduces an admin-facing dashboard for managing the new value-added services proposed for the emerging-technology assignment. The dashboard connects existing platform data with trend analytics and AI-style content support.
+The admin-facing dashboard manages the value-added services introduced for the emerging-technology assignment. It connects platform data with trend analytics, provider-aware content support, calendar planning, moderation, and integration visibility.
 
 ## Routes
 
@@ -472,7 +472,7 @@ GET /admin/login
 ```
 
 ## Purpose
-The dashboard will help platform managers monitor users, posts, trends, integrations, and recommendation services from one place. It will also demonstrate how analytics and intelligent content support can enrich an existing social media ecosystem.
+The dashboard helps platform managers monitor users, posts, trends, integrations, and recommendation services from one place. It demonstrates how analytics and intelligent content support can enrich an existing social media ecosystem.
 
 ## Implemented Dashboard Sections
 
@@ -481,7 +481,7 @@ The dashboard will help platform managers monitor users, posts, trends, integrat
 | User Management | View registered users, profile details, follower/following counts, and post counts |
 | Post Management | Review Bloom & Brew posts, engagement counts, author details, and moderation actions |
 | Calendar Management | Create, edit, delete, filter, and schedule public or admin-only calendar post ideas |
-| Trend Management | Display trending keywords from Bloom, Reddit, and YouTube content |
+| Trend Management | Display trending keywords calculated from Reddit and recent Bloom content |
 | AI Suggestions | Generate provider-aware post ideas from trends, review them, and reuse approved ideas in the calendar |
 | Integration Management | Show Reddit and YouTube source status, fallback behavior, and API configuration state |
 
@@ -509,14 +509,14 @@ The dashboard will help platform managers monitor users, posts, trends, integrat
 | Integrations | Integration status view implemented; richer API health/fallback diagnostics remain backlog |
 
 ## Emerging Technology Value
-This module uses trend analytics, recommendation logic, and external API integration to show how emerging technologies can improve social media platforms. Instead of only displaying content, the system will help users and admins interpret content patterns and turn them into useful services.
+This module uses trend analytics, provider-aware recommendation logic, and external API integration to show how emerging technologies can improve social media platforms. Instead of only displaying content, the system helps admins interpret content patterns and turn them into reviewed, calendar-ready creator services.
 
 ---
 
 # 6.15 AI-Assisted Content Suggestions
 
 ## Description
-The app already analyzes trending keywords through `src/lib/trends.ts`. The next step is to convert those signals into practical content suggestions for creators and admins.
+The app analyzes trending keywords through `src/lib/trends.ts` and converts those signals into practical content suggestions for admin review and creator planning.
 
 ## Implemented Suggestions
 - Post topic ideas based on trending keywords
@@ -667,7 +667,7 @@ GET /api/youtube
 ```
 
 ### Description
-Fetches cafe, latte art, flower, and bouquet-related videos from the YouTube Data API, normalizes them into the same social feed shape as Reddit and Bloom & Brew posts, and returns them to the homepage feed. If `YOUTUBE_API_KEY` is missing or the API fails, the route returns a fallback feed item explaining that the key is not configured.
+Fetches cafe, latte art, flower, and bouquet-related videos from the YouTube Data API, normalizes them into the same social feed shape as Reddit and Bloom & Brew posts, and returns them to the homepage feed. If `YOUTUBE_API_KEY` is missing, the API fails, or no usable videos are returned, the route supplies curated cafe and floral video-inspiration posts and reports the source as `fallback`.
 
 ### Response Shape
 
@@ -1158,7 +1158,7 @@ prisma.config.ts
 | Serving Port | Managed by Vercel |
 | Domain | Vercel generated or custom domain |
 | Database | Prisma Postgres / PostgreSQL |
-| Required Environment Variables | `DATABASE_URL`, `YOUTUBE_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXT_PUBLIC_APP_URL` |
+| Environment Variables | Required: `DATABASE_URL`; feature configuration: `ADMIN_EMAILS`, `YOUTUBE_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXT_PUBLIC_APP_URL`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, `DATABASE_POOL_MAX` |
 
 ## Current Build Scripts
 
@@ -1181,17 +1181,23 @@ Vercel uses the Next.js framework preset for production runtime. The `start` scr
 |---|---|
 | Reddit API failure | Fallback dataset |
 | API abuse | Reddit fetch cache/revalidation; external sync has request-count, body-size, field-length, source, and date validation plus an instance-local rate limit |
-| Sensitive keys | `DATABASE_URL` and `YOUTUBE_API_KEY` are stored in `.env` locally and must be configured as Vercel environment variables |
+| Sensitive configuration | Database, YouTube, Google OAuth, DeepSeek, and admin allowlist values are stored in `.env` locally and must be configured as protected Vercel environment variables |
 | XSS | React escapes rendered text; user content is rendered as text |
 | Authentication | Database-backed custom auth with HTTP-only session cookie |
 | Password storage | Passwords are hashed before storage |
+| OAuth account linking | Google identities are linked in PostgreSQL; access and refresh tokens are currently stored without application-level encryption and require production hardening |
 | Database access | Prisma Client is used only from server-side code/API routes |
+| Database connections | The PostgreSQL adapter uses `DATABASE_POOL_MAX` with a conservative default of one connection per application instance |
 
 ## Production Security Recommendation
 For a real deployed social network, strengthen the current custom auth with:
 - email verification
 - password reset
 - distributed rate limiting across authentication and mutation routes
+- runtime validation and field limits on every external-post interaction route
+- removal or application-level encryption of stored OAuth access and refresh tokens
+- atomic AI suggestion-to-calendar conversion with a unique database relationship
+- calendar validation that prevents an end date earlier than its start date
 - additional OAuth providers or migration to a maintained authentication framework
 - CSRF review for state-changing routes
 - stricter server-side authorization checks
@@ -1319,11 +1325,13 @@ For a real deployed social network, strengthen the current custom auth with:
 - YouTube persistence: YouTube video posts are fetched from the API and embedded in the feed, while user interactions are saved locally in PostgreSQL
 - Follow personalization: follow records persist in PostgreSQL and power a Following feed, but external Reddit/YouTube posts are not personalized by follows
 - User identity: real accounts and Google OAuth accounts exist, but there is no password reset, multi-provider linking UI, or advanced account security yet
+- OAuth token handling: provider identities are persisted, but stored access and refresh tokens are not encrypted at the application layer and are not currently used after sign-in
 - Authorization: admin allowlist protection exists, but there is no database-backed admin role field yet
 - Notifications: in-app notifications are database-backed, with browser permission request but no push service worker
 - Media editing: CSS filters only
 - Geolocation: coordinate tagging only, no map/location search
 - Calendar events: event scheduling and post idea reuse are database-backed, but reminders, RSVP/save-event flows, and recurring events are not implemented
+- Calendar validation: date parsing is enforced, but the server does not yet reject an end date earlier than the start date
 - Reddit source: public JSON endpoint with fallback data; OAuth/API credentials are currently deferred
 - User management dashboard: user metrics, search, pagination, edit controls, disable/reactivate controls, and server-action authorization checks exist; dedicated admin management API routes remain incomplete
 - Post management dashboard: post and engagement data, search, status filtering, pagination, hide/restore, delete confirmation, delete controls, and server-action authorization checks exist; dedicated admin management API routes remain incomplete
@@ -1331,6 +1339,9 @@ For a real deployed social network, strengthen the current custom auth with:
 - Integration management dashboard: integration status view exists, but richer health/fallback diagnostics are not complete
 - Share analytics: share counters persist, but selected platform/method is not yet persisted for analytics
 - External metadata refresh: batched sync inserts missing external posts efficiently, but existing mirrored titles/images are not currently refreshed during sync
+- External interaction validation: batch sync validates source metadata, size, and dates, but individual like, save, share, and comment routes do not yet apply the same runtime payload validator
+- External comment scaling: batch statistics are grouped efficiently, but external comments are currently returned without per-post limits or cursor pagination
+- AI Suggestions calendar conversion: approval is enforced, but event creation and suggestion status updates are not yet wrapped in a single transaction or unique one-to-one relationship
 - Sync throttling: request throttling is process-local and should use Redis or platform-level controls for multi-instance production
 
 ## Not Yet Implemented
@@ -1348,6 +1359,9 @@ For a real deployed social network, strengthen the current custom auth with:
 - Real video/audio streaming
 - Live-room UI and lifecycle
 - Comprehensive server-side authorization rules for every mutation route
+- Consistent runtime input validation and field-length limits across all mutation routes
+- Application-level OAuth token encryption or removal of unused provider tokens
+- Atomic, uniquely constrained AI suggestion-to-calendar conversion
 - Distributed production rate limiting
 
 ---
@@ -1367,12 +1381,22 @@ For a real deployed social network, strengthen the current custom auth with:
 - Trend keywords are displayed and feed the provider-aware AI Suggestions workflow, but there is no featured-trend approval workflow yet
 - Bloom feed responses transfer only the latest three comments; complete threads are available on demand, but very large threads do not yet have their own comment cursor pagination
 - Existing mirrored Reddit/YouTube metadata is not refreshed by the optimized missing-record batch insert
+- Individual external interaction routes trust client-supplied external-post metadata without applying the batch sync validator
+- External comment synchronization can grow with the complete stored comment history for the requested posts
+- Calendar management does not yet enforce `endsAt >= startsAt`
+- Concurrent add-to-calendar submissions can create more than one draft for the same AI suggestion
 - External sync rate limiting is instance-local and resets with the server process
 
 ---
 
 # 17. Future Improvements
 
+- Apply `isValidExternalPostPayload` to every external like, save, share, and comment route
+- Add server-side field-length limits for posts, comments, profiles, media URLs, and calendar inputs
+- Remove unused stored OAuth tokens or encrypt tokens required by future provider integrations
+- Add bounded external-comment previews and cursor pagination for complete external threads
+- Validate calendar date ordering on create and update
+- Make AI suggestion-to-calendar conversion transactional and uniquely constrained
 - Add admin-only management API routes with authorization checks
 - Add database-backed admin roles
 - Add trend approval/featured workflows using the existing keyword analysis utility
@@ -1400,7 +1424,7 @@ For a real deployed social network, strengthen the current custom auth with:
 
 # 18. Recommended Next Implementation Sequence
 
-The public feed UX hardening milestone is now implemented on the current feature branch. The next development branch should return to the management functionality required by the new assignment question.
+The public feed, admin management, calendar, OAuth, and AI Suggestions milestones are implemented on the main branch. The next development work should prioritize data integrity and production hardening before expanding the Assignment 3 feature surface.
 
 ## Completed Feed UX Milestone: Public Feed UX Hardening
 - Load Reddit and YouTube content together during the homepage server render
@@ -1422,10 +1446,16 @@ The public feed UX hardening milestone is now implemented on the current feature
 - Deploy composite feed pagination indexes to PostgreSQL
 - Add automated cursor/payload tests and an idempotent 35-post feed-scale seed command
 
-## Priority 1: Admin Management Hardening
-- Move admin mutations into dedicated API/server-action helpers where useful
+## Priority 1: Data Integrity and Security Hardening
+- Validate external-post payloads consistently across sync and individual interaction routes
+- Add server-side request and field-length limits to content mutation routes
+- Remove or encrypt stored Google OAuth tokens
+- Validate calendar end dates against start dates
+- Make suggestion-to-calendar conversion atomic and uniquely constrained
+- Bound and paginate external comment synchronization
 
-## Priority 2: Database-Backed Admin Roles
+## Priority 2: Admin Management and Database-Backed Roles
+- Move shared admin authorization and mutation logic into focused server helpers where useful
 - Add a user role or admin flag to Prisma
 - Migrate admin access from `ADMIN_EMAILS` to database-backed authorization
 - Keep `ADMIN_EMAILS` only as a local bootstrap option if needed
@@ -1436,9 +1466,9 @@ The public feed UX hardening milestone is now implemented on the current feature
 - Report suggestion provider usage across DeepSeek and the local trend engine
 
 ## Priority 4: Integration Management
-- Display Reddit and YouTube source status
-- Show whether fallback data is active
-- Show missing API key or fetch failure states in a management-friendly format
+- Add last-success and last-failure timestamps for Reddit and YouTube
+- Distinguish missing credentials, upstream failures, and active fallback data
+- Add manual source refresh and richer health diagnostics
 
 ---
 
